@@ -9,7 +9,7 @@ from gridTools import gridTools
 import sblib as sb
 import makenc
 from inputOutput import stwaveIO
-
+import datetime as DT
 
 # todaysNC = nc.Dataset('http://bones/thredds/dodsC/FRF/survey/gridded/FRF_20170127_1123_FRF_NAVD88_LARC_GPS_UTC_v20170203_grid_latlon.nc')
 # rawDEM = '/home/spike/repos/makeBathyInterp/Data/FRF_NCDEM_Nad83_geographic_MSL_meters.xyz'
@@ -57,23 +57,62 @@ for yy in range(0, xFRF.shape[1]):
 STIO = stwaveIO('')
 STIO.depfname_nest = [yesterdaysDEP]
 DEPpacket = STIO.DEPload(nested=True)
-elevation = - np.squeeze(DEPpacket['bathy']).T
-todaysBathyPacket = {'latitude': lat,
+elevation = - DEPpacket['bathy'] # flip depths to elevations (sign convention)
+yesterdaysBathyPacket = {'latitude': lat,
                       'longitude': lon,
                       'easting': easting,
                       'northing': northing,
-                      'xFRF': xFRF,
-                      'yFRF': yFRF,
-                      'elevation': elevation}
-ofname = 'todaysBathy.nc'
+                      'xFRF': xFRF[0,:],
+                      'yFRF': yFRF[:,0],
+                      'elevation': elevation,
+                      'azimuth': spatial['azi'],
+                      'time': nc.date2num(DT.datetime(2007,01,01), 'seconds since 1970-01-01')}
+ofname = 'todaysBathyOriginal.nc'
 globalYaml = 'C:/Users/spike/Documents/repos/makebathyinterp/yamls/TodaysBathySTWAVEGlobal.yml'
 varYaml = 'C:/Users/spike/Documents/repos/makebathyinterp/yamls/TodaysBathy_var.yml'
-makenc.makenc_todaysBathyCMTB(todaysBathyPacket, ofname, globalYaml, varYaml)
+makenc.makenc_todaysBathyCMTB(yesterdaysBathyPacket, ofname, globalYaml, varYaml)
+
+##
+## Now incorporate new data into bathy gridding process
+# function inputs
+yesterdaysBathyNC = nc.Dataset('todaysBathyOriginal.nc')
+oldBathy = yesterdaysBathyNC['elevation'][0]
+xFRF = yesterdaysBathyNC['xFRF']
+yFRF = yesterdaysBathyNC['yFRF']
+
+todaysNC = nc.Dataset('http://bones/thredds/dodsC/FRF/survey/gridded/FRF_20170127_1123_FRF_NAVD88_LARC_GPS_UTC_v20170203_grid_latlon.nc')
+todaysBathy = todaysNC['bathymetry'][0]
+
+# 1. eliminiate grid points in the 'old' bathy based on location
 #
-# todaysGrid = todaysNC['elevation'][0]
-#
-#
+
+# 2. put 'old' data into xraw, yraw, zraw 1D arrays
+
+# 3. put New data into xnew, ynew, znew
+
+# 4. append new to raw values
+
+# 5. create grid nodes of output
+
+# 6. run natural neighbor interpolation scheme
 # # set up gridding procedure
 # ngl.nnsetp
 # # run natural neighbor algorithm
 # ngl.natgrid
+
+# 7. create new dictionary for New grid Creation
+yesterdaysBathyPacket = {'latitude': lat,
+                      'longitude': lon,
+                      'easting': easting,
+                      'northing': northing,
+                      'xFRF': xFRF[0,:],
+                      'yFRF': yFRF[:,0],
+                      'elevation': elevation,
+                      'azimuth': spatial['azi'],
+                      'time': time}
+# make NetCDF file using Dictonary.
+ofname = 'todaysBathyNew.nc'
+globalYaml = 'C:/Users/spike/Documents/repos/makebathyinterp/yamls/TodaysBathySTWAVEGlobal.yml'
+varYaml = 'C:/Users/spike/Documents/repos/makebathyinterp/yamls/TodaysBathy_var.yml'
+makenc.makenc_todaysBathyCMTB(yesterdaysBathyPacket, ofname, globalYaml, varYaml)
+
