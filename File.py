@@ -11,9 +11,6 @@ import makenc
 from inputOutput import stwaveIO
 
 
-"""
-
-"""
 # todaysNC = nc.Dataset('http://bones/thredds/dodsC/FRF/survey/gridded/FRF_20170127_1123_FRF_NAVD88_LARC_GPS_UTC_v20170203_grid_latlon.nc')
 # rawDEM = '/home/spike/repos/makeBathyInterp/Data/FRF_NCDEM_Nad83_geographic_MSL_meters.xyz'
 # gridNodesX = np.linspace(0, 10000, 155)
@@ -24,6 +21,8 @@ version_prefix = 'HP'
 
 yesterdaysSim = 'C:/Users/spike/Documents/repos/CMTB/gridsSTWAVE/Minigrid_5m.sim'
 yesterdaysDEP = 'C:/Users/spike/Documents/repos/CMTB/gridsSTWAVE/Minigrid_5m.dep'
+# yesterdaysDEP = 'C:\Users\spike\Documents\repos\CMTB\gridsSTWAVE\Minigrid_5m.dep'
+
 # x, y, z = gridTools.openGridXYZ(rawDEM)
 # # grid nodes for Background
 # xNode = np.unique(x)
@@ -43,28 +42,32 @@ outIfrf, outJfrf = gridTools.convertGridNodesFromStatePlane(iStatePlane, jStateP
 # assert (outIfrf[:,1] == icoords['FRF_Y']).all()
 # assert (outJfrf[:,0] == jcoords['FRF_X']).all()
 # assert (outJfrf[:,1] == jcoords['FRF_Y']).all()
-outIfrf[:,1]
+#outIfrf[:,1]
 xFRF, yFRF = np.meshgrid(outIfrf[:, 0], outJfrf[:,1])
 
 lat, lon = np.empty_like(xFRF), np.empty_like(xFRF)
 easting, northing = np.empty_like(xFRF), np.empty_like(xFRF)
-for yy in xFRF.shape[0]:
-    for xx in xFRF.shape[1]:
+for yy in range(0, xFRF.shape[1]):
+    for xx in range(0, xFRF.shape[0]):
         convert = sb.FRFcoord(xFRF[xx,yy], yFRF[xx, yy])
         lat[xx, yy] = convert['Lat']
         lon[xx, yy] = convert['Lon']
         easting[xx, yy] = convert['StateplaneE']
         northing[xx, yy] = convert['StateplaneN']
-stio = stwaveIO(yesterdaysDEP)
-DEPpacket = stio.DEPload(yesterdaysDEP)
+STIO = stwaveIO('')
+STIO.depfname_nest = [yesterdaysDEP]
+DEPpacket = STIO.DEPload(nested=True)
+elevation = - np.squeeze(DEPpacket['bathy']).T
 todaysBathyPacket = {'latitude': lat,
                       'longitude': lon,
                       'easting': easting,
                       'northing': northing,
                       'xFRF': xFRF,
                       'yFRF': yFRF,
-                      'elevation': 1}
-
+                      'elevation': elevation}
+ofname = 'todaysBathy.nc'
+globalYaml = 'C:/Users/spike/Documents/repos/makebathyinterp/yamls/TodaysBathySTWAVEGlobal.yml'
+varYaml = 'C:/Users/spike/Documents/repos/makebathyinterp/yamls/TodaysBathy_var.yml'
 makenc.makenc_todaysBathyCMTB(todaysBathyPacket, ofname, globalYaml, varYaml)
 #
 # todaysGrid = todaysNC['elevation'][0]
