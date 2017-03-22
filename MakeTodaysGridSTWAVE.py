@@ -16,7 +16,7 @@ yesterdaysDEP = '/home/spike/CMTB/gridsSTWAVE/Minigrid_5m.dep'
 # get the data packet from DEP
 yesterdaysBathyPacket = gridTools.GetOriginalGridFromSTWAVE(yesterdaysSim, yesterdaysDEP)
 # make netCDF file for original bathy
-yesterdaysListfname = ['%s/todaysBathyOriginal.nc' %dataLocation]
+yesterdaysListfname = ['%s/todaysBathyOriginal_STWAVE_5m.nc' %dataLocation]
 globalYaml = '/home/spike/repos/makeBathyInterp/yamls/TodaysBathySTWAVEGlobal.yml'
 varYaml = '/home/spike/repos/makeBathyInterp/yamls/TodaysBathy_var.yml'
 makenc.makenc_todaysBathyCMTB(yesterdaysBathyPacket, yesterdaysListfname[0], globalYaml, varYaml)
