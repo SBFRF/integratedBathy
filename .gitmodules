@@ -1,0 +1,3 @@
+[submodule "gridTools"]
+	path = gridTools
+	url = git@bitbucket.org:SBFRF/gridtools.git

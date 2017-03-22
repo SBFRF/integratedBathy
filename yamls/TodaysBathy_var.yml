@@ -1,6 +1,6 @@
 # WAVE TEMPLATE
 
-_variables: ['time', 'xFRF', 'yFRF', 'latitude', 'longitude', 'northing', 'easting',  'elevation']
+_variables: ['time', 'xFRF', 'yFRF', 'latitude', 'longitude', 'northing', 'easting',  'elevation', 'azimuth']
 _attributes: ['notes']
 _dimensions: ['time', 'xFRF', 'yFRF']
 
@@ -78,7 +78,7 @@ elevation:
     standard_name: ''
     long_name: 'bottom elevation'
     data_type: 'f8'
-    dim: ['time','xFRF', 'yFRF']
+    dim: ['time', 'xFRF', 'yFRF']
     fill_value: '-999'
     short_name: 'z'
     description: 'Elevation is in NAVD88'
@@ -89,7 +89,7 @@ azimuth:
     standard_name: ''
     long_name: 'bottom elevation'
     data_type: 'f8'
-    dim: ['time','xFRF', 'yFRF']
+    dim: []
     fill_value: '-999'
     short_name: 'z'
     description: 'grid Azimuth'
