@@ -24,7 +24,7 @@ makenc.makenc_todaysBathyCMTB(yesterdaysBathyPacket, yesterdaysListfname[0], glo
 ##################################################################
 # # # ## now loop through history on thredds #####################
 ##################################################################
-methods = ['ngl', 'ngl'] # plant, metpy, and matplotlib also valid
+methods = ['ngl'] # plant, metpy, and matplotlib also valid
 for interpType in methods:
     newncfile = nc.Dataset('http://bones/thredds/dodsC/FRF/survey/gridded/gridded.ncml')
     for idxNew, time in enumerate(newncfile['time'][:]):
@@ -58,6 +58,6 @@ for interpType in methods:
                       'azimuth': backgroundGridnc['azimuth']}
 
         print ' Working on %s interpolation now for %s' % (interpType, date)
-        ofnameNC = dataLocation + '/' + interpType + '/todaysBathyNewFromGrids_%s.nc' % (date.strftime('%Y-%m-%d'))
+        ofnameNC = dataLocation + '/' + interpType + '/todaysBathyNewFromGrids_%s_STWAVE_5m.nc' % (date.strftime('%Y-%m-%d'))
         gridTools.MakeTodaysBathy(ofnameNC=ofnameNC, dataPacket=dataPacket, plotFlag=True, interpType= interpType)
         yesterdaysListfname.append(ofnameNC)
