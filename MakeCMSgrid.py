@@ -17,8 +17,7 @@ globalYaml = 'yamls/TodaysBathyCMSGlobal.yml'  # yaml for Todaysbathy files
 varYaml = 'yamls/TodaysBathy_var.yml'
 makenc.makenc_todaysBathyCMTB(bathyPacket, yesterdaysListfname[0], globalYaml, varYaml)
 
-
-methods = ['ngl'] # plant, metpy, and matplotlib also valid
+methods = ['matplotlib'] # plant, metpy, and matplotlib also valid
 for interpType in methods:
     newncfile = nc.Dataset('http://bones/thredds/dodsC/FRF/survey/gridded/gridded.ncml')
     for idxNew, time in enumerate(newncfile['time'][:]):
@@ -39,7 +38,7 @@ for interpType in methods:
 
         # make data packet
         dataPacket = {'time': date,
-                      'newZfrf': newZfrf,
+                      'newZfrf': -newZfrf, # made this negative to be in positive down elevations
                       'newYfrf': newYfrf,
                       'newXfrf': newXfrf,
                       'oldBathy': backgroundGridnc['elevation'][idxOld],  # send only 2D array to function
