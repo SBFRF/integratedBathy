@@ -1,3 +1,6 @@
 [submodule "gridTools"]
 	path = gridTools
 	url = git@bitbucket.org:SBFRF/gridtools.git
+[submodule "sblib"]
+	path = sblib
+	url = git@bitbucket.org:SBFRF/sblib.git

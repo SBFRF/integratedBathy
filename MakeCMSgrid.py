@@ -5,16 +5,16 @@ import netCDF4 as nc
 import numpy as np
 # base dep file
 cio = cmsIO()
-depFname = '/home/spike/CMTB/HP_CMS_data/exampleCMSfiles/CMS-Wave-FRF.dep'
+depFname = 'exampleCMSfiles/CMS-Wave-FRF.dep'
 z, dx, dy = cio.ReadCMS_dep(depFname)
-simFname = '/home/spike/CMTB/HP_CMS_data/exampleCMSfiles/CMS-Wave-FRF.sim'
+simFname = 'exampleCMSfiles/CMS-Wave-FRF.sim'
 x0, y0, azi = cio.ReadCMS_sim(simFname)
 bathyPacket = gridTools.makeCMSgridNodes(x0, y0, azi, dx, dy, z, plot=False)
 # make bathy packet into netCDF file
-dataLocation = '/home/spike/repos/makeBathyInterp/Data'  # this is where data comes from and goes to, eventually thredds address
+dataLocation = 'Data'  # this is where data comes from and goes to, eventually thredds address
 yesterdaysListfname = ['%s/todaysBathyOriginal_CMSwave_v1.nc' %dataLocation]
-globalYaml = '/home/spike/repos/makeBathyInterp/yamls/TodaysBathyCMSGlobal.yml'  # yaml for Todaysbathy files
-varYaml = '/home/spike/repos/makeBathyInterp/yamls/TodaysBathy_var.yml'
+globalYaml = 'yamls/TodaysBathyCMSGlobal.yml'  # yaml for Todaysbathy files
+varYaml = 'yamls/TodaysBathy_var.yml'
 makenc.makenc_todaysBathyCMTB(bathyPacket, yesterdaysListfname[0], globalYaml, varYaml)
 
 

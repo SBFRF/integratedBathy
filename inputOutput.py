@@ -1531,7 +1531,7 @@ class cmsIO():
         :param fname:
         :return: grid origin, x, y, and azimuth
         """
-        fname = '/home/spike/CMTB/HP_CMS_data/exampleCMSfiles/CMS-Wave-FRF.sim'
+
         f = open(fname, 'r')
         sim = f.readlines()
         f.close()
