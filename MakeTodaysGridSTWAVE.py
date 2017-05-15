@@ -2,29 +2,30 @@
 import netCDF4 as nc
 import numpy as np
 import sys
-sys.path.append('/home/spike/CMTB')
-# sys.path.append('/home/spike/CMTB/gridsSTWAVE')
 import makenc
 from gridTools import gridTools
 
-dataLocation = '/home/spike/repos/makeBathyInterp/Data'  # this is where data comes from and goes to, eventually thredds address
+
+# Select which resolution for STWAVE
+resolution = '5'
+dataLocation = '/home/number/thredds_data/grids/STWAVE_%sm' % resolution  # this is where data comes from and goes to, eventually thredds address
 ##################################################################
 # MAKE FIRST BATHY FROM SIM FILE
 ##################################################################
-yesterdaysSim = '/home/spike/CMTB/gridsSTWAVE/Minigrid_5m.sim'
-yesterdaysDEP = '/home/spike/CMTB/gridsSTWAVE/Minigrid_5m.dep'
+yesterdaysSim = '/home/number/CMTB/gridsSTWAVE/Minigrid_%sm.sim' % resolution
+yesterdaysDEP = '/home/number/CMTB/gridsSTWAVE/Minigrid_%sm.dep' % resolution
 # get the data packet from DEP
 yesterdaysBathyPacket = gridTools.GetOriginalGridFromSTWAVE(yesterdaysSim, yesterdaysDEP)
 # make netCDF file for original bathy
-yesterdaysListfname = ['%s/todaysBathyOriginal_STWAVE_5m.nc' %dataLocation]
-globalYaml = '/home/spike/repos/makeBathyInterp/yamls/TodaysBathySTWAVEGlobal.yml'
-varYaml = '/home/spike/repos/makeBathyInterp/yamls/TodaysBathy_var.yml'
+yesterdaysListfname = ['%s/todaysBathyOriginal_STWAVE_%sm.nc' %(dataLocation, resolution)]
+globalYaml = 'yamls/TodaysBathySTWAVEGlobal.yml'
+varYaml = 'yamls/TodaysBathy_var.yml'
 makenc.makenc_todaysBathyCMTB(yesterdaysBathyPacket, yesterdaysListfname[0], globalYaml, varYaml)
 
 ##################################################################
 # # # ## now loop through history on thredds #####################
 ##################################################################
-methods = ['ngl'] # plant, metpy, and matplotlib also valid
+methods = ['matplotlib'] # plant, metpy, and matplotlib also valid
 for interpType in methods:
     newncfile = nc.Dataset('http://bones/thredds/dodsC/FRF/survey/gridded/gridded.ncml')
     for idxNew, time in enumerate(newncfile['time'][:]):
@@ -58,6 +59,6 @@ for interpType in methods:
                       'azimuth': backgroundGridnc['azimuth']}
 
         print ' Working on %s interpolation now for %s' % (interpType, date)
-        ofnameNC = dataLocation + '/' + interpType + '/todaysBathyNewFromGrids_%s_STWAVE_5m.nc' % (date.strftime('%Y-%m-%d'))
+        ofnameNC = dataLocation + '/todaysBathyNewFromGrids_%s_STWAVE_%sm.nc' % (date.strftime('%Y-%m-%d'), resolution)
         gridTools.MakeTodaysBathy(ofnameNC=ofnameNC, dataPacket=dataPacket, plotFlag=True, interpType= interpType)
         yesterdaysListfname.append(ofnameNC)
