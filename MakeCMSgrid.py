@@ -9,9 +9,9 @@ depFname = 'exampleCMSfiles/CMS-Wave-FRF.dep'
 z, dx, dy = cio.ReadCMS_dep(depFname)
 simFname = 'exampleCMSfiles/CMS-Wave-FRF.sim'
 x0, y0, azi = cio.ReadCMS_sim(simFname)
-bathyPacket = gridTools.makeCMSgridNodes(x0, y0, azi, dx, dy, z, plot=False)
+bathyPacket = gridTools.makeCMSgridNodes(x0, y0, azi, dx, dy, z)
 # make bathy packet into netCDF file
-dataLocation = 'Data'  # this is where data comes from and goes to, eventually thredds address
+dataLocation = '/home/number/thredds_data/grids/CMSwave_v1'  # this is where data comes from and goes to, eventually thredds address
 yesterdaysListfname = ['%s/todaysBathyOriginal_CMSwave_v1.nc' %dataLocation]
 globalYaml = 'yamls/TodaysBathyCMSGlobal.yml'  # yaml for Todaysbathy files
 varYaml = 'yamls/TodaysBathy_var.yml'
@@ -51,6 +51,6 @@ for interpType in methods:
                       'azimuth': backgroundGridnc['azimuth']}
 
         print ' Working on %s interpolation now for %s' % (interpType, date)
-        ofnameNC = dataLocation + '/' + interpType + '/todaysBathyNewFromGrids_%s_CMS.nc' % (date.strftime('%Y-%m-%d'))
-        gridTools.MakeTodaysBathy(ofnameNC=ofnameNC, dataPacket=dataPacket, plotFlag=True, interpType= interpType)
+        ofnameNC = dataLocation + '/todaysBathyNewFromGrids_%s_CMS.nc' % (date.strftime('%Y-%m-%d'))
+        gridTools.MakeTodaysBathy(ofnameNC=ofnameNC, dataPacket=dataPacket, plotFlag=True, interpType=interpType)
         yesterdaysListfname.append(ofnameNC)
