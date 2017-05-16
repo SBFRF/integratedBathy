@@ -58,7 +58,10 @@ for interpType in methods:
                       'longitude': backgroundGridnc['longitude'][:],
                       'easting': backgroundGridnc['easting'][:],
                       'northing': backgroundGridnc['northing'][:],
-                      'azimuth': backgroundGridnc['azimuth']}
+                      'azimuth': backgroundGridnc['azimuth'][:],
+                      'x0': backgroundGridnc['x0'][:],
+                      'y0':backgroundGridnc['y0'][:],
+                      }
 
         print ' Working on %s interpolation now for %s' % (interpType, date)
         ofnameNC = dataLocation + '/todaysBathyNewFromGrids_%s_STWAVE_%sm.nc' % (date.strftime('%Y-%m-%d'), resolution)

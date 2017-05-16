@@ -3,19 +3,25 @@ from gridTools import gridTools
 import makenc
 import netCDF4 as nc
 import numpy as np
+from subprocess import check_output
+
+whoami = check_output('whoami').split('\n')[0]
+
+
 # base dep file
 cio = cmsIO()
-depFname = 'exampleCMSfiles/CMS-Wave-FRF.dep'
-z, dx, dy = cio.ReadCMS_dep(depFname)
-simFname = 'exampleCMSfiles/CMS-Wave-FRF.sim'
-x0, y0, azi = cio.ReadCMS_sim(simFname)
-bathyPacket = gridTools.makeCMSgridNodes(x0, y0, azi, dx, dy, z)
+yesterdaysDep = 'exampleCMSfiles/CMS-Wave-FRF.dep'
+z, dx, dy = cio.ReadCMS_dep(yesterdaysDep)
+yesterdaysSim = 'exampleCMSfiles/CMS-Wave-FRF.sim'
+x0, y0, azi = cio.ReadCMS_sim(yesterdaysSim)
+yesterdaysBathyPacket = gridTools.makeCMSgridNodes(x0, y0, azi, dx, dy, z)
+yesterdaysBathyPacket['x0'], yesterdaysBathyPacket['y0'], yesterdaysBathyPacket['azimuth'] = x0, y0, azi
 # make bathy packet into netCDF file
-dataLocation = '/home/number/thredds_data/grids/CMSwave_v1'  # this is where data comes from and goes to, eventually thredds address
+dataLocation = '/home/%s/thredds_data/grids/CMSwave_v1' % whoami  # this is where data comes from and goes to, eventually thredds address
 yesterdaysListfname = ['%s/todaysBathyOriginal_CMSwave_v1.nc' %dataLocation]
 globalYaml = 'yamls/TodaysBathyCMSGlobal.yml'  # yaml for Todaysbathy files
 varYaml = 'yamls/TodaysBathy_var.yml'
-makenc.makenc_todaysBathyCMTB(bathyPacket, yesterdaysListfname[0], globalYaml, varYaml)
+makenc.makenc_todaysBathyCMTB(yesterdaysBathyPacket, yesterdaysListfname[0], globalYaml, varYaml)
 
 methods = ['matplotlib'] # plant, metpy, and matplotlib also valid
 for interpType in methods:
@@ -48,7 +54,9 @@ for interpType in methods:
                       'longitude': backgroundGridnc['longitude'][:],
                       'easting': backgroundGridnc['easting'][:],
                       'northing': backgroundGridnc['northing'][:],
-                      'azimuth': backgroundGridnc['azimuth']}
+                      'azimuth': backgroundGridnc['azimuth'][:],
+                      'x0': backgroundGridnc['x0'][:],
+                      'y0': backgroundGridnc['y0'][:]}
 
         print ' Working on %s interpolation now for %s' % (interpType, date)
         ofnameNC = dataLocation + '/todaysBathyNewFromGrids_%s_CMS.nc' % (date.strftime('%Y-%m-%d'))
