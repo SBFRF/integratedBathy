@@ -4,16 +4,18 @@ import numpy as np
 import sys
 import makenc
 from gridTools import gridTools
-
+from subprocess import check_output
 
 # Select which resolution for STWAVE
 resolution = '5'
-dataLocation = '/home/number/thredds_data/grids/STWAVE_%sm' % resolution  # this is where data comes from and goes to, eventually thredds address
+whoami = check_output('whoami').split('\n')[0]
+
+dataLocation = '/home/%s/thredds_data/grids/STWAVE_%sm' % (whoami, resolution)  # this is where data comes from and goes to, eventually thredds address
 ##################################################################
 # MAKE FIRST BATHY FROM SIM FILE
 ##################################################################
-yesterdaysSim = '/home/number/CMTB/gridsSTWAVE/Minigrid_%sm.sim' % resolution
-yesterdaysDEP = '/home/number/CMTB/gridsSTWAVE/Minigrid_%sm.dep' % resolution
+yesterdaysSim = '/home/%s/CMTB/gridsSTWAVE/Minigrid_%sm.sim' % (whoami, resolution)
+yesterdaysDEP = '/home/%s/CMTB/gridsSTWAVE/Minigrid_%sm.dep' % (whoami, resolution)
 # get the data packet from DEP
 yesterdaysBathyPacket = gridTools.GetOriginalGridFromSTWAVE(yesterdaysSim, yesterdaysDEP)
 # make netCDF file for original bathy

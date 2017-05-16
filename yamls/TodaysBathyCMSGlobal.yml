@@ -4,7 +4,8 @@ summary: >
  This is today's gridded bathymetry.  This is created for use in the Coastal Model Test bed.  this is an evolving
  grid updated with the most recent bathymetry that are measured using the FRF monthly surveys if not more often
  during projects.  User must be aware that positional coordinate error grows with distance from FRF origin, due to
- assumptions made in coordinate conversions
+ assumptions made in coordinate conversions.  Coordinate locations are centric to cell,  This is converted from origin
+ being located at vertex of cell.  All values reported are centric to cell center.
 history: file made locally 
 source: file made locally
 sourceUrl: (local files)
@@ -16,7 +17,7 @@ creator_name: USACE/CHL/COAB
 creator_url: http://frf.usace.army.mil
 creator_email: frfwebmaster@usace.army.mil
 license: >
-  These data may be redistributed and used without restriction. .
+  These data may be redistributed and used without restriction.
   Data are intended for scholarly use by the research community,
   with the express agreement that users will properly acknowledge
   the USACE Field Research Facility and the supporting investigator(s).
@@ -60,7 +61,7 @@ geospatial_lat_units: degrees_north
 geospatial_lon_min:
 geospatial_lon_max:
 geospatial_lon_units: degrees_east
-geospatial_vertical_positive: up
+geospatial_vertical_positive: False
 time_coverage_start: '2015-09-18T22:00:00Z'
 time_coverage_end: '2015-09-18T22:00:00Z'
 deployment_start: '2015-09-18T22:00:00Z'

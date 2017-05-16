@@ -61,6 +61,7 @@ xFRF:
     dim: ['xFRF']
     fill_value: '-999'
     short_name: 'x'
+    notes:  'These locations are centric to the cell center (for all models)'
 
 yFRF:
     name: 'yFRF'
@@ -71,6 +72,7 @@ yFRF:
     dim: ['yFRF']
     fill_value: '-999'
     short_name: 'y'
+    notes: 'These locations are centric to the cell center (for all models)'
 
 elevation:
     name: 'elevation'

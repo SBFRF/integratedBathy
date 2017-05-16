@@ -1,0 +1,17 @@
+CMS-WAVE    906000.0000    284500.0000       200.0000
+DEP       CMS-Wave-FRF.dep
+OPTS      CMS-Wave-FRF.std
+CURR      CMS-Wave-FRF.cur
+SPEC      CMS-Wave-FRF.eng
+WAVE      CMS-Wave-FRF.wav
+OBSE      CMS-Wave-FRF.obs
+NEST      CMS-Wave-FRF.nst
+BREAK     CMS-Wave-FRF.brk
+SPGEN     CMS-Wave-FRF.txt
+RADS      CMS-Wave-FRF.rad
+STRUCT    CMS-Wave-FRF.struct
+FRIC      CMS-Wave-FRF.fric
+FREF      CMS-Wave-FRF.fref
+BREF      CMS-Wave-FRF.bref
+MUD       CMS-Wave-FRF.mud
+WIND      CMS-Wave-FRF.wind
