@@ -37,7 +37,7 @@ for interpType in methods:
         idxOld = 0   #len(yesterdaysListfname)-1  # counts upwards with each one made
 
         # make data packet
-        dataPacket = {'time': date,,
+        dataPacket = {'time': date,
                       'newZfrf': -newZfrf, # made this negative to be in positive down elevations
                       'newYfrf': newYfrf,
                       'newXfrf': newXfrf,
