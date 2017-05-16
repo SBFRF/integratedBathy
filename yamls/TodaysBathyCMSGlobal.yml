@@ -5,7 +5,7 @@ summary: >
  grid updated with the most recent bathymetry that are measured using the FRF monthly surveys if not more often
  during projects.  User must be aware that positional coordinate error grows with distance from FRF origin, due to
  assumptions made in coordinate conversions.  Coordinate locations are centric to cell,  This is converted from origin
- being located at vertex of cell.  All values reported are centric to cell center.
+ being located at vertex of cell.  All values reported are centric to cell center. elevations are positive down
 history: file made locally 
 source: file made locally
 sourceUrl: (local files)
@@ -61,7 +61,7 @@ geospatial_lat_units: degrees_north
 geospatial_lon_min:
 geospatial_lon_max:
 geospatial_lon_units: degrees_east
-geospatial_vertical_positive: False
+geospatial_vertical_positive: down
 time_coverage_start: '2015-09-18T22:00:00Z'
 time_coverage_end: '2015-09-18T22:00:00Z'
 deployment_start: '2015-09-18T22:00:00Z'
@@ -71,5 +71,5 @@ cross_shore_angle_description: cross shore angle at the USACE FRF site in DUCK, 
 cross_shore_angle: 71.8
 dX: variable
 dY: variable
-nX: 366
-nY: 386
+ni: 366
+nj: 386
