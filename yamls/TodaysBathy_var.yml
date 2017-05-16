@@ -1,6 +1,6 @@
 # WAVE TEMPLATE
 
-_variables: ['time', 'xFRF', 'yFRF', 'latitude', 'longitude', 'northing', 'easting',  'elevation', 'azimuth']
+_variables: ['time', 'xFRF', 'yFRF', 'latitude', 'longitude', 'northing', 'easting',  'elevation', 'azimuth', 'x0', 'y0']
 _attributes: ['notes']
 _dimensions: ['time', 'xFRF', 'yFRF']
 
@@ -61,7 +61,7 @@ xFRF:
     dim: ['xFRF']
     fill_value: '-999'
     short_name: 'x'
-    notes:  'These locations are centric to the cell center (for all models)'
+    notes:  'These locations are centric to the cell center for CMS vertex for STWAVE'
 
 yFRF:
     name: 'yFRF'
@@ -72,7 +72,7 @@ yFRF:
     dim: ['yFRF']
     fill_value: '-999'
     short_name: 'y'
-    notes: 'These locations are centric to the cell center (for all models)'
+    notes: 'These locations are centric to the cell center for CMS vertex for STWAVE'
 
 elevation:
     name: 'elevation'
@@ -96,5 +96,26 @@ azimuth:
     short_name: 'z'
     description: 'grid Azimuth'
 
+x0:
+  name: 'x0'
+  units: 'm'
+  standard_name: ''
+  long_name: 'grid origin in stateplane east'
+  data_type: 'f8'
+  dim: []
+  fill_value: '-999'
+  short_name: 'grid origin x'
+  description: 'this is the origin (vertex) of the grid in stateplane east'
+
+y0:
+  name: 'y0'
+  units: 'm'
+  standard_name: ''
+  long_name: 'grid origin in stateplane North'
+  data_type: 'f8'
+  dim: []
+  fill_value: '-999'
+  short_name: 'grid origin x'
+  description: 'this is the origin (vertex) of the grid in stateplane North'
 
 
