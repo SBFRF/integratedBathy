@@ -15,7 +15,6 @@ z, dx, dy = cio.ReadCMS_dep(yesterdaysDep)
 yesterdaysSim = 'exampleCMSfiles/CMS-Wave-FRF.sim'
 x0, y0, azi = cio.ReadCMS_sim(yesterdaysSim)
 yesterdaysBathyPacket = gridTools.makeCMSgridNodes(x0, y0, azi, dx, dy, z)
-yesterdaysBathyPacket['x0'], yesterdaysBathyPacket['y0'], yesterdaysBathyPacket['azimuth'] = x0, y0, azi
 # make bathy packet into netCDF file
 dataLocation = '/home/%s/thredds_data/grids/CMSwave_v1' % whoami  # this is where data comes from and goes to, eventually thredds address
 yesterdaysListfname = ['%s/todaysBathyOriginal_CMSwave_v1.nc' %dataLocation]
