@@ -89,12 +89,12 @@ azimuth:
     name: 'azimuth'
     units: 'm'
     standard_name: ''
-    long_name: 'bottom elevation'
+    long_name: 'grid Azimuth'
     data_type: 'f8'
     dim: []
     fill_value: '-999'
     short_name: 'z'
-    description: 'grid Azimuth'
+    description: 'grid orientation in nc stateplane degrees'
 
 x0:
   name: 'x0'
