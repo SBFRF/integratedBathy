@@ -1,0 +1,65 @@
+# stuff
+
+_variables: ['elevation', 'latitude', 'longitude', 'xFRF', 'yFRF']
+_attributes: ['notes']
+_dimensions: ['xFRF', 'yFRF']
+
+elevation:
+    name: 'elevation'
+    units: 'm'
+    standard_name: ''
+    long_name: 'bed elevation for the bathymetry nodes'
+    data_type: 'f8'
+    dim: ['yFRF', 'xFRF']
+    fill_value: '-9999.99'
+    short_name: 'bathy'
+    coordinates: 'yFRF xFRF'
+    description: 'Bottom elevation for the bathymetry nodes'
+
+latitude:
+    name: 'latitude'
+    units: 'Degrees'
+    standard_name: ''
+    long_name: 'Latitude of each bathymetry node in decimal degrees'
+    data_type: 'f8'
+    dim: ['yFRF', 'xFRF']
+    fill_value: '-999.99'
+    short_name: 'lat'
+    coordinates: 'yFRF xFRF'
+    description: 'Latitude of the bathymetry nodes in decimal degrees'
+
+longitude:
+    name: 'longitude'
+    units: 'Degrees'
+    standard_name: ''
+    long_name: 'Longitude of each bathymetry node in decimal degrees'
+    data_type: 'f8'
+    dim: ['yFRF', 'xFRF']
+    fill_value: '-999.99'
+    short_name: 'lon'
+    coordinates: 'yFRF xFRF'
+    description: 'Longitude of the bathymetry nodes in decimal degrees'
+
+xFRF:
+    name: 'xFRF'
+    units: 'm'
+    standard_name: ''
+    long_name: 'cross-shore position of each node - m'
+    data_type: 'f8'
+    dim: ['xFRF']
+    fill_value: '-999.99'
+    short_name: 'xFRF'
+    coordinates: 'xFRF'
+    description: 'cross-shore position of each node in m FRF coordinates'
+
+yFRF:
+    name: 'yFRF'
+    units: 'm'
+    standard_name: ''
+    long_name: 'along-shore position of each node - m'
+    data_type: 'f8'
+    dim: ['yFRF']
+    fill_value: '-999.99'
+    short_name: 'yFRF'
+    coordinates: 'yFRF'
+    description: 'along-shore position of each node in m FRF coordinates'

@@ -509,3 +509,222 @@ def  makenc_todaysBathyCMTB(gridDict, ofname, globalYaml, varYaml):
     write_data_to_nc(fid, varAtts, gridDict)
     # close file
     fid.close()
+
+def makenc_CSHORErun(ofname, dataDict, globalYaml, varYaml):
+    """
+       This is a function that makes netCDF files from CSHORE model runs created by
+       David Young using all the stuff Spicer Bak used. You have to build dataDict from the different dictionaries
+       output by cshore_io.load_CSHORE_results().  YOU DONT HAVE TO HAND IT LAT LON THOUGH!!!
+
+       :param dataDict:
+                keys:
+                ['time']
+                ['X_shore']
+                ['aveE'] - depth averaged eastward current!
+                ['stdE'] - standard deviation of eastward current
+                ['aveN'] - same as above but northward current
+                ['stdN'] - same as above but northward
+                ['waveHs']
+                ['waveMeanDirection']
+                ['waterLevel']
+                ['stdWaterLevel']
+                ['setup']
+                ['runup2perc']
+                ['runupMean']
+                ['qbx'] - cross-shore bed load sediment transport rate
+                ['qsx'] - cross-shore suspended sediment transport rate
+                ['qby'] - same as above but alongshore
+                ['qsx'] - same as above but alongshore
+                ['probabilitySuspension'] - probability that sediment will be suspended at particular node
+                ['probabilityMovement'] - probability that sediment will move
+                ['suspendedSedVolume']
+                ['bottomElevation']
+                ['surveyNumber']
+                ['profileNumber']
+                ['bathymetryDate']
+                ['yFRF']
+       :param ofname:
+       :param globalYaml:
+       :param varYaml:
+
+       :return: netCDF file with CSHORE model results in it
+       """
+    globalAtts = import_template_file(globalYaml)
+    varAtts = import_template_file(varYaml)
+
+    # create netcdf file
+    fid = init_nc_file(ofname, globalAtts)
+
+    # note: you have to hand this the yFRF coordinates of the BC gage if you want to get lat/lon..
+    lx = np.size(dataDict['X_shore'], axis=0)
+    lat = np.zeros(lx)
+    lon = np.zeros(lx)
+    for ii in range(0, lx):
+        coords = sb.FRFcoord(dataDict['X_shore'][ii], dataDict['yFRF'])
+        lat[ii] = coords['Lat']
+        lon[ii] = coords['Lon']
+    dataDict['latitude'] = lat
+    dataDict['longitude'] = lon
+
+    # ok, we are HARD CODING the dimensions to ALWAYS be at the 8m ARRAY (xFRF = 914.44 rounded DOWN to 914)
+    # we will just fill in the missing values with nans as required
+    array8m_loc = 914
+
+    # creating dimensions of data
+    new_s = np.shape(range(0, array8m_loc + 1))[0]
+    new_t = np.shape(dataDict['waveHs'])[0]
+    xShore = fid.createDimension('X_shore', new_s)
+    time = fid.createDimension('time', new_t)
+
+    # check to see if the grid I am importing is smaller than my netCDF grid
+    if np.shape(range(0, array8m_loc + 1))[0] == np.shape(dataDict['X_shore']):
+        # the model grid is the same as the netCDF grid, so do nothing
+        pass
+    else:
+        dataDict_n = {'X_shore': np.flipud(np.array(range(0, array8m_loc + 1)) + 0.0),
+                      'time': dataDict['time'],
+                      'aveE': np.full((new_t, new_s), fill_value=np.nan),
+                      'stdE': np.full((new_t, new_s), fill_value=np.nan),
+                      'aveN': np.full((new_t, new_s), fill_value=np.nan),
+                      'stdN': np.full((new_t, new_s), fill_value=np.nan),
+                      'waveHs': np.full((new_t, new_s), fill_value=np.nan),
+                      'waveMeanDirection': np.full((new_t, new_s), fill_value=np.nan),
+                      'waterLevel': np.full((new_t, new_s), fill_value=np.nan),
+                      'stdWaterLevel': np.full((new_t, new_s), fill_value=np.nan),
+                      'setup': np.full((new_t, new_s), fill_value=np.nan),
+                      'runup2perc': dataDict['runup2perc'],
+                      'runupMean': dataDict['runupMean'],
+                      'qbx': np.full((new_t, new_s), fill_value=np.nan),
+                      'qsx': np.full((new_t, new_s), fill_value=np.nan),
+                      'qby': np.full((new_t, new_s), fill_value=np.nan),
+                      'qsy': np.full((new_t, new_s), fill_value=np.nan),
+                      'probabilitySuspension': np.full((new_t, new_s), fill_value=np.nan),
+                      'probabilityMovement': np.full((new_t, new_s), fill_value=np.nan),
+                      'suspendedSedVolume': np.full((new_t, new_s), fill_value=np.nan),
+                      'bottomElevation': np.full((new_t, new_s), fill_value=np.nan),
+                      'latitude': np.full((new_s), fill_value=np.nan),
+                      'longitude': np.full((new_s), fill_value=np.nan),
+                      'surveyNumber': dataDict['surveyNumber'],
+                      'profileNumber': dataDict['profileNumber'],
+                      'bathymetryDate': dataDict['bathymetryDate'],
+                      'yFRF': dataDict['yFRF'], }
+
+        if 'FIXED' in ofname:
+            dataDict_n['bottomElevation'] = np.full((new_s), fill_value=np.nan)
+        elif 'MOBILE' in ofname:
+            dataDict_n['bottomElevation'] = np.full((new_t, new_s), fill_value=np.nan)
+        else:
+            print 'You need to modify makenc_CSHORErun in makenc.py to accept your new version name!'
+
+        # find index of first point on dataDict grid
+        min_x = min(dataDict['X_shore'])
+        ind_minx = int(np.argwhere(dataDict_n['X_shore'] == min_x))
+        max_x = max(dataDict['X_shore'])
+        ind_maxx = int(np.argwhere(dataDict_n['X_shore'] == max_x))
+
+        for ii in range(0, int(new_t)):
+            dataDict_n['aveE'][ii][ind_maxx:ind_minx + 1] = dataDict['aveE'][ii]
+            dataDict_n['stdE'][ii][ind_maxx:ind_minx + 1] = dataDict['stdE'][ii]
+            dataDict_n['aveN'][ii][ind_maxx:ind_minx + 1] = dataDict['aveN'][ii]
+            dataDict_n['stdN'][ii][ind_maxx:ind_minx + 1] = dataDict['stdN'][ii]
+            dataDict_n['waveHs'][ii][ind_maxx:ind_minx + 1] = dataDict['waveHs'][ii]
+            dataDict_n['waveMeanDirection'][ii][ind_maxx:ind_minx + 1] = dataDict['waveMeanDirection'][ii]
+            dataDict_n['waterLevel'][ii][ind_maxx:ind_minx + 1] = dataDict['waterLevel'][ii]
+            dataDict_n['stdWaterLevel'][ii][ind_maxx:ind_minx + 1] = dataDict['stdWaterLevel'][ii]
+            dataDict_n['setup'][ii][ind_maxx:ind_minx + 1] = dataDict['setup'][ii]
+            dataDict_n['qbx'][ii][ind_maxx:ind_minx + 1] = dataDict['qbx'][ii]
+            dataDict_n['qsx'][ii][ind_maxx:ind_minx + 1] = dataDict['qsx'][ii]
+            dataDict_n['qby'][ii][ind_maxx:ind_minx + 1] = dataDict['qby'][ii]
+            dataDict_n['qsy'][ii][ind_maxx:ind_minx + 1] = dataDict['qsy'][ii]
+            dataDict_n['probabilitySuspension'][ii][ind_maxx:ind_minx + 1] = dataDict['probabilitySuspension'][ii]
+            dataDict_n['probabilityMovement'][ii][ind_maxx:ind_minx + 1] = dataDict['probabilityMovement'][ii]
+            dataDict_n['suspendedSedVolume'][ii][ind_maxx:ind_minx + 1] = dataDict['suspendedSedVolume'][ii]
+            dataDict_n['latitude'][ind_maxx:ind_minx + 1] = dataDict['latitude'][ii]
+            dataDict_n['longitude'][ind_maxx:ind_minx + 1] = dataDict['longitude'][ii]
+
+        if 'FIXED' in ofname:
+            dataDict_n['bottomElevation'][ind_maxx:ind_minx + 1] = dataDict['bottomElevation']
+        elif 'MOBILE' in ofname:
+            for ii in range(0, int(new_t)):
+                dataDict_n['bottomElevation'][ii][ind_maxx:ind_minx + 1] = dataDict['bottomElevation'][ii]
+        else:
+            print 'You need to modify makenc_CSHORErun in makenc.py to accept your new version name!'
+
+        # check to see if I screwed up!
+        assert set(dataDict.keys()) == set(dataDict_n.keys()), 'You are missing dictionary keys in the new dictionary!'
+        # replace the dictionary with the new dictionary
+        del dataDict
+        dataDict = dataDict_n
+        del dataDict_n
+
+    # write data to file
+    write_data_to_nc(fid, varAtts, dataDict)
+    # close file
+    fid.close()
+
+def makenc_intBATHY(ofname, dataDict, globalYaml, varYaml):
+    """
+    :param ofname: this is the name of the ncfile you are building
+    :param dataDict: keys must include...
+        latitude - decimal degrees
+        longitude - decimal degrees
+        bottomElevation - in m NAVD88 I think
+        utmNorthing - this is utm in meters (not feet)
+        utmEasting - this is utm in meters (not feet)
+
+        note: each of these must be 2d arrays of the SAME SHAPE!!!!
+
+    :param globalYaml:
+    :param varYaml:
+    :return: writes out the ncfile
+    """
+
+    globalAtts = import_template_file(globalYaml)
+    varAtts = import_template_file(varYaml)
+
+    # create netcdf file
+    fid = init_nc_file(ofname, globalAtts)
+
+    # creating dimensions of data
+    ni = fid.createDimension('ni', dataDict['utmEasting'].shape[1])
+    nj = fid.createDimension('nj', dataDict['utmEasting'].shape[0])
+
+    # write data to file
+    write_data_to_nc(fid, varAtts, dataDict)
+    # close file
+    fid.close()
+
+def makenc_t0BATHY(ofname, dataDict, globalYaml, varYaml):
+    """
+    # this is the script that builds the t0 netCDF file from the initial Bathy DEM (intBathy)
+
+    :param ofname: this is the name of the ncfile you are building
+    :param dataDict: keys must include...
+        latitude - decimal degrees
+        longitude - decimal degrees
+        bottomElevation - in m NAVD88 I think
+        note: each of these must be 2d arrays of the SAME SHAPE!!!!
+
+        xFRF - in m
+        yFRF - in m
+        note: these are 1D arrays that contain the coordinates in each dimension
+
+    :param globalYaml:
+    :param varYaml:
+    :return: writes out the ncfile
+    """
+
+    globalAtts = import_template_file(globalYaml)
+    varAtts = import_template_file(varYaml)
+
+    # create netcdf file
+    fid = init_nc_file(ofname, globalAtts)
+
+    # creating dimensions of data
+    xFRF = fid.createDimension('xFRF', dataDict['xFRF'].shape[0])
+    yFRF = fid.createDimension('yFRF', dataDict['yFRF'].shape[0])
+
+    # write data to file
+    write_data_to_nc(fid, varAtts, dataDict)
+    # close file
+    fid.close()

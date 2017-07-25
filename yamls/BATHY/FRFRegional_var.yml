@@ -1,0 +1,89 @@
+# CSHORE template
+
+_variables: ['bottomElevation', 'latitude', 'longitude', 'utmNorthing', 'utmEasting']
+_attributes: ['notes']
+_dimensions: ['ni', 'nj']
+
+ni:
+    name: 'ni'
+    units: 'index'
+    standard_name: ''
+    long_name: 'utmE index'
+    data_type: 'f8'
+    dim: ['ni']
+    fill_value: '-999.99'
+    short_name: 'ni'
+    coordinates: 'ni'
+    description: 'the index of each grid cell in the utmE direction'
+
+nj:
+    name: 'nj'
+    units: 'index'
+    standard_name: ''
+    long_name: 'utmN index'
+    data_type: 'f8'
+    dim: ['nj']
+    fill_value: '-999.99'
+    short_name: 'nj'
+    coordinates: 'nj'
+    description: 'the index of each grid cell in the utmN direction'
+
+bottomElevation:
+    name: 'bottomElevation'
+    units: 'm'
+    standard_name: ''
+    long_name: 'bed elevation for the bathymetry nodes'
+    data_type: 'f8'
+    dim: ['nj', 'ni']
+    fill_value: '-9999.99'
+    short_name: 'bathy'
+    coordinates: 'utmE utmN'
+    description: 'Bottom elevation for the bathymetry nodes'
+
+latitude:
+    name: 'latitude'
+    units: 'Degrees'
+    standard_name: ''
+    long_name: 'Latitude of each bathymetry node in decimal degrees'
+    data_type: 'f8'
+    dim: ['nj', 'ni']
+    fill_value: '-999.99'
+    short_name: 'lat'
+    coordinates: 'utmE utmN'
+    description: 'Latitude of the bathymetry nodes in decimal degrees'
+
+longitude:
+    name: 'longitude'
+    units: 'Degrees'
+    standard_name: ''
+    long_name: 'Longitude of each bathymetry node in decimal degrees'
+    data_type: 'f8'
+    dim: ['nj', 'ni']
+    fill_value: '-999.99'
+    short_name: 'lon'
+    coordinates: 'utmE utmN'
+    description: 'Longitude of the bathymetry nodes in decimal degrees'
+
+utmNorthing:
+    name: 'utmNorthing'
+    units: 'm'
+    standard_name: ''
+    long_name: 'northing of each node in m utm'
+    data_type: 'f8'
+    dim: ['nj', 'ni']
+    fill_value: '-999.99'
+    short_name: 'utmNorthing'
+    coordinates: 'utmE utmN'
+    description: 'northing of each node in m utm'
+
+utmEasting:
+    name: 'utmEasting'
+    units: 'm'
+    standard_name: ''
+    long_name: 'easting of each node in m utm'
+    data_type: 'f8'
+    dim: ['nj', 'ni']
+    fill_value: '-999.99'
+    short_name: 'utmEasting'
+    coordinates: 'utmE utmN'
+    description: 'easting of each node in m utm'
