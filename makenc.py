@@ -728,3 +728,44 @@ def makenc_t0BATHY(ofname, dataDict, globalYaml, varYaml):
     write_data_to_nc(fid, varAtts, dataDict)
     # close file
     fid.close()
+
+def makenc_tiBATHY(ofname, dataDict, globalYaml, varYaml):
+    """
+    # this is the script that builds the monthly ti netCDF file by incorporating the new survey data into the most recent Bathy DEM
+
+    :param ofname: this is the name of the ncfile you are building
+    :param dataDict: keys must include...
+        latitude - decimal degrees
+        longitude - decimal degrees
+        note: these must be 2d arrays of the SAME SHAPE!!!!
+
+        xFRF - in m
+        yFRF - in m
+        note: these are 1D arrays that contain the coordinates in each dimension
+
+        elevation - in m
+        note: this is an ns X yFRF X xFRF array
+
+        surveyNumber - this is a 1D array of length ns (number of surveys in the month)
+        surveyTime - this is a 1D array of length ns
+
+    :param globalYaml:
+    :param varYaml:
+    :return: writes out the ncfile
+    """
+
+    globalAtts = import_template_file(globalYaml)
+    varAtts = import_template_file(varYaml)
+
+    # create netcdf file
+    fid = init_nc_file(ofname, globalAtts)
+
+    # creating dimensions of data
+    ns = fid.createDimension('ns', dataDict['surveyNumber'].shape[0])
+    xFRF = fid.createDimension('xFRF', dataDict['xFRF'].shape[0])
+    yFRF = fid.createDimension('yFRF', dataDict['yFRF'].shape[0])
+
+    # write data to file
+    write_data_to_nc(fid, varAtts, dataDict)
+    # close file
+    fid.close()
