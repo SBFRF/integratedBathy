@@ -761,7 +761,7 @@ def makenc_tiBATHY(ofname, dataDict, globalYaml, varYaml):
     fid = init_nc_file(ofname, globalAtts)
 
     # creating dimensions of data
-    ns = fid.createDimension('ns', dataDict['surveyNumber'].shape[0])
+    time = fid.createDimension('time', dataDict['time'].shape[0])
     xFRF = fid.createDimension('xFRF', dataDict['xFRF'].shape[0])
     yFRF = fid.createDimension('yFRF', dataDict['yFRF'].shape[0])
 

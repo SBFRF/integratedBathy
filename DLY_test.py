@@ -83,8 +83,8 @@ makenc.makenc_t0BATHY(os.path.join(nc_loc, nc_name), nc_dict, globalYaml=global_
 """
 
 # list of inputs!!!!!
-x_smooth = 100 # scale c interp x-direction smoothing
-y_smooth = 200 # scale c interp y-direction smoothing
+x_smooth = 100  # scale c interp x-direction smoothing
+y_smooth = 200  # scale c interp y-direction smoothing
 # splinebctype - this is the type of spline you want to force
 # options are....
 # 2 - second derivative goes to zero at boundary
@@ -92,24 +92,31 @@ y_smooth = 200 # scale c interp y-direction smoothing
 # 0 - value is zero at boundary
 # 10 - force value and derivative(first?!?) to zero at boundary
 splinebctype = 10
-lc = 2 # spline smoothing constraint value
-dxm = 2 # coarsening of the grid for spline (e.g., 2 means calculate with a dx that is 2x input dx)
+lc = 2  # spline smoothing constraint value
+dxm = 2  # coarsening of the grid for spline (e.g., 2 means calculate with a dx that is 2x input dx)
 # can be tuple if you want to do dx and dy seperately (dxm, dym), otherwise dxm is used for both
-dxi = 1 # fining of the grid for spline (e.g., 0.1 means return spline on a grid that is 10x input dx)
+dxi = 1  # fining of the grid for spline (e.g., 0.1 means return spline on a grid that is 10x input dx)
 # as with dxm, can be a tuple if you want seperate values for dxi and dyi
 targetvar = 0.45 # this is the target variance used in the spline function.
 # It is used in conjunction with the MSE from splineCinterp to compute the spline weights (wb)
-dSTR_e = '2012-06-01T00:00:00Z'
-dSTR_s = '2012-06-30T00:00:00Z'
+dSTR_s = '2013-01-04T00:00:00Z'
+dSTR_e = '2014-12-22T23:59:59Z'
 dir_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles'
 # this is where I am going to save the monthy nc files
 
 
 
+# force the survey to start at the first of the month and end at the last of the month!!!!
+dSTR_s = dSTR_s[0:7] + '-01T00:00:00Z'
+if dSTR_e[5:7] == '12':
+    dSTR_e = str(int(dSTR_e[0:4]) + 1) + '-01' + '-01T00:00:00Z'
+else:
+    dSTR_e = dSTR_e[0:5] + str(int(dSTR_e[5:7]) + 1).zfill(2) + '-01T00:00:00Z'
 
-# hard code the start time for the surveys??? - no... just make it the default value
-d_e = DT.datetime.strptime(dSTR_e, '%Y-%m-%dT%H:%M:%SZ')
 d_s = DT.datetime.strptime(dSTR_s, '%Y-%m-%dT%H:%M:%SZ')
+d_e = DT.datetime.strptime(dSTR_e, '%Y-%m-%dT%H:%M:%SZ')
+d_e = d_e - DT.timedelta(seconds=1)
+
 
 # how many months, years between my start and end times?
 
@@ -122,7 +129,7 @@ num_yrs = int(year_end) - int(year_start)
 
 # show time....
 
-for ii in range(0, num_yrs+1):
+for ii in range(0, num_yrs):
 
     # make year directories!!!
     yrs_dir = str(int(year_start) + int(ii))
@@ -157,7 +164,6 @@ for ii in range(0, num_yrs+1):
 
     # ok, now to make my nc files, I just need to go through and find all surveys that fall in these months
     filelist = ['http://134.164.129.55/thredds/dodsC/FRF/geomorphology/elevationTransects/survey/surveyTransects.ncml']
-    # filelist_surv = ['http://134.164.129.55/thredds/dodsC/FRF/geomorphology/elevationTransects/survey/FRF_19740509_0001_CERC_NAVD88_Topo_Level_UTC_v20160327.nc']
     bathy = nc.Dataset(filelist[0])
     # pull down all the times....
     times = nc.num2date(bathy.variables['time'][:], bathy.variables['time'].units, bathy.variables['time'].calendar)
@@ -183,8 +189,8 @@ for ii in range(0, num_yrs+1):
 
         # if there are no surveys here, then skip the rest of this loop...
         if len(surveys) < 1:
-            continue
             print('No surveys found for ' + yrs_dir + '-' + months[jj])
+            continue
         else:
             pass
 
@@ -208,16 +214,44 @@ for ii in range(0, num_yrs+1):
 
 
         # SEARCH FOR MOST RECENT BATHY HERE!!!
+        nc_url = 'http://134.164.129.62:8080/thredds/dodsC/CMTB/grids/UpdatedBackgroundDEM/UpdatedBackgroundDEM.ncml'
+
+        nc_b_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles'
+        nc_b_name = 'backgroundDEMt0.nc'
 
         # load the background bathy from netDCF file now
-        nc_b_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles'
-        nc_name = 'backgroundDEMt0.nc'
-        test = nc.Dataset(os.path.join(nc_b_loc, nc_name))
-        nc_vars = [var for var in test.variables]
+        try:
+            # look for the .nc file that I just wrote!!!
+            old_bathy = nc.Dataset(os.path.join(prev_nc_loc, prev_nc_name))
+            ob_times = nc.num2date(old_bathy.variables['time'][:], old_bathy.variables['time'].units, old_bathy.variables['time'].calendar)
 
-        Zi = test.variables['elevation'][:]
-        xFRFi_vec = test.variables['xFRF'][:]
-        yFRFi_vec = test.variables['yFRF'][:]
+            # find newest time prior to this
+            t_mask = (ob_times <= d1)  # boolean true/false of time
+            t_idx = np.where(t_mask)[0][-1]  # I want the MOST RECENT ONE - i.e., the last one
+
+            Zi = old_bathy.variables['elevation'][t_idx, :]
+            xFRFi_vec = old_bathy.variables['xFRF'][:]
+            yFRFi_vec = old_bathy.variables['yFRF'][:]
+        except:
+            try:
+                # look for the most up to date bathy in the ncml file....
+                old_bathy = nc.Dataset(nc_url)
+                ob_times = nc.num2date(old_bathy.variables['time'][:], old_bathy.variables['time'].units, old_bathy.variables['time'].calendar)
+                # find newest time prior to this
+                t_mask = (ob_times <= d_s)  # boolean true/false of time
+                t_idx = np.where(t_mask)[0][-1]  # I want the MOST RECENT ONE - i.e., the last one
+
+                Zi = old_bathy.variables['elevation'][t_idx, :]
+                xFRFi_vec = old_bathy.variables['xFRF'][:]
+                yFRFi_vec = old_bathy.variables['yFRF'][:]
+
+            except:
+                # load the background bathy from netDCF file if you can't get the ncml
+                old_bathy = nc.Dataset(os.path.join(nc_b_loc, nc_b_name))
+                Zi = old_bathy.variables['elevation'][:]
+                xFRFi_vec = old_bathy.variables['xFRF'][:]
+                yFRFi_vec = old_bathy.variables['yFRF'][:]
+
 
         # read out the dx and dy of the background grid!!!
         # assume this is constant grid spacing!!!!!
@@ -344,7 +378,7 @@ for ii in range(0, num_yrs+1):
 
 
             # check out what I get from scaleCInterp?
-
+            """
             plt.figure()
             plt.subplot(221)
             plt.title('Zi')
@@ -363,6 +397,7 @@ for ii in range(0, num_yrs+1):
             plt.pcolor(out['x_out'], out['y_out'], out['MSRi'])
             plt.colorbar()
             plt.tight_layout()
+            """
 
 
             # read some stuff from this dict like a boss
@@ -468,10 +503,13 @@ for ii in range(0, num_yrs+1):
         nc_dict['longitude'] = longitude
         # also want survey number and survey time....
         nc_dict['surveyNumber'] = surveyNumber
-        nc_dict['surveyTime'] = surveyTime
-
+        nc_dict['time'] = surveyTime
 
         nc_name = 'backgroundDEM_' + months[jj] + '.nc'
+
+        # save this location for next time through the loop
+        prev_nc_name = nc_name
+        prev_nc_loc = nc_loc
 
         global_yaml = 'C:\Users\dyoung8\PycharmProjects\makebathyinterp\yamls\BATHY\FRFti_global.yml'
         var_yaml = 'C:\Users\dyoung8\PycharmProjects\makebathyinterp\yamls\BATHY\FRFti_var.yml'
@@ -482,17 +520,25 @@ for ii in range(0, num_yrs+1):
 
         # where is the cross shore array?
         test = nc.Dataset('http://134.164.129.55/thredds/dodsC/FRF/oceanography/waves/8m-array/2017/FRF-ocean_waves_8m-array_201707.nc')
-        dataX = bathy['latitude'][:]
-        dataY = bathy['longitude'][:]
+        Lat = test['latitude'][:]
+        Lon = test['longitude'][:]
+        # convert to FRF
+        temp = gp.FRFcoord(Lon, Lat)
+        CSarray_X = temp['xFRF']
+        CSarray_Y = temp['yFRF']
 
+        fig_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\Test Figures\QAQCfigs'
+        fig_name = 'backgroundDEM_' + yrs_dir + '-' + months[jj] + '.png'
 
         plt.figure()
         plt.contourf(xFRF, yFRF, elevation[-1, :, :])
-        plt.colorbar()
-        plt.plot(dataX, dataY, 'k*', label='Transects')
-        plt.plot(dataX, dataX, 'k*', label='Transects')
-        plt.xlabel('xFRF')
-        plt.ylabel('yFRF')
+        cbar = plt.colorbar()
+        cbar.set_label('(m)')
+        plt.scatter(dataX, dataY, marker='o', c='k', s=1, alpha=0.25, label='Transects')
+        plt.plot(CSarray_X, CSarray_Y, 'rX', label='CS-array')
+        plt.xlabel('xFRF (m)')
+        plt.ylabel('yFRF (m)')
+        plt.legend()
         plt.savefig(os.path.join(fig_loc, fig_name))
         plt.close()
 
