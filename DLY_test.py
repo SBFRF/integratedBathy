@@ -372,6 +372,51 @@ for ii in range(0, num_yrs):
                     }
 
             out = DEM_generator(dict)
+            prof_minX[ss] = min(Xprof)
+            prof_maxX[ss] = max(Xprof)
+
+            # this rounds all these numbers down to the nearest dx
+            prof_minX = prof_minX - (prof_minX%dx)
+            prof_maxX = prof_maxX - (prof_maxX%dx)
+            # note: this only does what you want if the numbers are all POSITIVE!!!!
+
+            # check my y-bounds
+            prof_maxY = max(dataY) - (max(dataY)%dy)
+            minY = min(dataY)
+            # it does check for negative y-values!!!
+            if minY > 0:
+                prof_minY = minY - (minY % dy)
+            else:
+                prof_minY = minY - (minY % dy) + dy
+
+            # ok, I am going to force the DEM generator function to always go to the grid specified by these bounds!!
+            # if you want to hand it a best guess grid, i.e., 'grid_filename' make SURE it has these bounds!!!!!!
+            # or just don't hand it grid_filename....
+            x0, y0 = np.median(prof_maxX), prof_maxY
+            x1, y1 = np.median(prof_minX), prof_minY
+            # currently using the median of the min and max X extends of each profile,
+            # and just the min and max of the y-extents of all the profiles.
+
+            # check to see if this is past the bounds of your background DEM.
+            # if so, truncate so that it does not exceed.
+            if x0 > max(xFRFi_vec):
+                x0 = max(xFRFi_vec)
+            else:
+                pass
+            if x1 < min(xFRFi_vec):
+                x1 = min(xFRFi_vec)
+            else:
+                pass
+            if y0 > max(yFRFi_vec):
+                y0 = max(yFRFi_vec)
+            else:
+                pass
+            if y1 < min(yFRFi_vec):
+                y1 = min(yFRFi_vec)
+            else:
+                pass
+
+
 
             plt.figure()
             plt.plot(dataX, dataY, 'r*')
