@@ -26,6 +26,7 @@ def makeUpdatedBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, 
     :param scalecDict: keys are:
                         x_smooth - x direction smoothing length for scalecInterp
                         y_smooth - y direction smoothing length for scalecInterp
+
                         if not specified it will default to:
                         x_smooth = 100
                         y_smooth = 200
@@ -42,6 +43,7 @@ def makeUpdatedBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, 
                         dxi - fining of the grid for spline (e.g., 0.1 means return spline on a grid that is 10x input dx)
                                 as with dxm, can be a tuple if you want separate values for dxi and dyi
                         targetvar - this is the target variance used in the spline function.
+
                         if not specified it will default to:
                         splinebctype = 10
                         lc = 4
@@ -86,7 +88,7 @@ def makeUpdatedBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, 
     # CS-array url - I just use this to get the position, not for any data
     cs_array_url = 'http://134.164.129.55/thredds/dodsC/FRF/oceanography/waves/8m-array/2017/FRF-ocean_waves_8m-array_201707.nc'
     # where do I want to save any QA/QC figures
-    fig_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\Test Figures\QAQCfigs'
+    fig_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\Test Figures\QAQCfigs_transects'
 
 
     #check scalecDict and splineDict
@@ -129,7 +131,7 @@ def makeUpdatedBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, 
     num_yrs = int(year_end) - int(year_start)
 
     # show time....
-    for ii in range(0, num_yrs):
+    for ii in range(0, num_yrs + 1):
 
         # make year directories!!!
         yrs_dir = str(int(year_start) + int(ii))
@@ -359,6 +361,27 @@ def makeUpdatedBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, 
                     # spline time?
                     wb = 1 - np.divide(MSEn, targetvar + MSEn)
                     newZdiff = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
+
+                    """
+                    # plot X and Y transects from newZdiff to see if it looks correct?
+                    # check near the midpoint
+                    x_check = int(0.5*len(xFRFn_vec))
+                    y_check = int(0.5 * len(yFRFn_vec))
+                    fig_name = 'backgroundDEM_' + yrs_dir + '-' + months[jj] + '-' + str(surveys[tt]) + '_Xtrans' + '.png'
+                    plt.plot(xFRFn[y_check, :], newZdiff[y_check, :])
+                    plt.xlabel('xFRF')
+                    plt.ylabel('splined Z (m)')
+                    plt.savefig(os.path.join(os.path.join(fig_loc[0:85], 'SplineChecks'), fig_name))
+                    plt.close()
+
+                    fig_name = 'backgroundDEM_' + yrs_dir + '-' + months[jj] + '-' + str(surveys[tt]) + '_Ytrans' + '.png'
+                    plt.plot(yFRFn[:, x_check], newZdiff[:, x_check])
+                    plt.xlabel('yFRF')
+                    plt.ylabel('splined Z (m)')
+                    plt.savefig(os.path.join(os.path.join(fig_loc[0:85], 'SplineChecks'), fig_name))
+                    plt.close()
+                    """
+
                     newZn = Zi_s + newZdiff
 
                     # get my new pretty splined grid
@@ -780,7 +803,7 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=N
     num_yrs = int(year_end) - int(year_start)
 
     # show time....
-    for ii in range(0, num_yrs):
+    for ii in range(0, num_yrs+1):
 
         # make year directories!!!
         yrs_dir = str(int(year_start) + int(ii))
