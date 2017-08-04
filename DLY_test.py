@@ -16,6 +16,7 @@ import matplotlib as m
 import pyproj
 import datetime as DT
 from scalecInterp_python.DEM_generator import DEM_generator
+import MakeUpdatedBathyDEM as mBATHY
 
 
 
@@ -99,10 +100,14 @@ dxi = 1  # fining of the grid for spline (e.g., 0.1 means return spline on a gri
 # as with dxm, can be a tuple if you want seperate values for dxi and dyi
 targetvar = 0.45 # this is the target variance used in the spline function.
 # It is used in conjunction with the MSE from splineCinterp to compute the spline weights (wb)
-dSTR_s = '2013-01-04T00:00:00Z'
-dSTR_e = '2014-12-22T23:59:59Z'
-dir_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles'
+dSTR_s = '2012-01-04T00:00:00Z'
+dSTR_e = '2016-12-22T23:59:59Z'
+dir_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles_gridded'
+# dir_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles'
 # this is where I am going to save the monthy nc files
+
+mBATHY.makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, plot=1)
+# mBATHY.makeUpdatedBATHY(dSTR_s, dSTR_e, dir_loc, plot=1)
 
 
 
