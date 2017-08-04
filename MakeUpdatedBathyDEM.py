@@ -601,11 +601,22 @@ def subgridBounds(surveyDict, gridDict, xMax=1000, maxSpace=149):
         pass
 
     del profNum_list
+    del prof_minX
+    del prof_maxX
+    del prof_minY
+    del prof_maxY
+    del prof_meanY
 
     # sort them by mean Y
     df_sub.sort_values(['prof_meanY'], ascending=1, inplace=True)
     df_sub.reset_index(drop=True, inplace=True)
     profNum_list = df_sub['profNum'].apply(np.array)
+
+    prof_minX = np.zeros(np.shape(profNum_list))
+    prof_maxX = np.zeros(np.shape(profNum_list))
+    prof_minY = np.zeros(np.shape(profNum_list))
+    prof_maxY = np.zeros(np.shape(profNum_list))
+    prof_meanY = np.zeros(np.shape(profNum_list))
 
     if np.size(profNum_list) == 0:
         out = {}
