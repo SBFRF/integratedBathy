@@ -9,10 +9,11 @@ from bsplineFunctions import bspline_pertgrid
 import datetime as DT
 from scalecInterp_python.DEM_generator import DEM_generator
 import pandas as pd
+from getdatatestbed import getDataFRF
 
 
 
-def makeUpdatedBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, plot=None):
+def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, plot=None):
     """
 
     :param dSTR_s: string that determines the start date of the times of the surveys you want to use to update the DEM
@@ -78,7 +79,7 @@ def makeUpdatedBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, 
     # this is just the location of the ncml for the already created UpdatedDEM
 
     nc_b_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles'
-    nc_b_name = 'backgroundDEMt0.nc'
+    nc_b_name = 'backgroundDEMt0_TimeMean.nc'
     # these together are the location of the standard background bathymetry that we started from.
 
     # Yaml files for my .nc files!!!!!
@@ -248,6 +249,7 @@ def makeUpdatedBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, 
                     xFRFi_vec = old_bathy.variables['xFRF'][:]
                     yFRFi_vec = old_bathy.variables['yFRF'][:]
 
+
             # read out the dx and dy of the background grid!!!
             # assume this is constant grid spacing!!!!!
             dx = abs(xFRFi_vec[1] - xFRFi_vec[0])
@@ -267,6 +269,17 @@ def makeUpdatedBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, 
 
             # ok, now that I have the list of the surveys I am going to keep.....
             for tt in range(0, len(surveys)):
+                """
+                # plot the initial bathymetry...
+                fig_name = 'backgroundDEM_' + str(surveys[tt]) + '_orig' + '.png'
+                plt.pcolor(xFRFi_vec, yFRFi_vec, Zi, cmap=plt.cm.jet, vmin=-13, vmax=5)
+                cbar = plt.colorbar()
+                cbar.set_label('(m)')
+                plt.xlabel('xFRF (m)')
+                plt.ylabel('yFRF (m)')
+                plt.savefig(os.path.join(fig_loc, fig_name))
+                plt.close()
+                """
 
                 # get the times of each survey
                 ids = (all_surveys == surveys[tt])
@@ -362,59 +375,53 @@ def makeUpdatedBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, 
                     wb = 1 - np.divide(MSEn, targetvar + MSEn)
                     newZdiff = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
 
-                    """
+
+                    newZn = Zi_s + newZdiff
+
+
                     # plot X and Y transects from newZdiff to see if it looks correct?
                     # check near the midpoint
                     x_check = int(0.5*len(xFRFn_vec))
                     y_check = int(0.5 * len(yFRFn_vec))
                     fig_name = 'backgroundDEM_' + yrs_dir + '-' + months[jj] + '-' + str(surveys[tt]) + '_Xtrans' + '.png'
-                    plt.plot(xFRFn[y_check, :], newZdiff[y_check, :])
+                    plt.plot(xFRFn[y_check, :], Zn[y_check, :], 'r', label='Original')
+                    plt.plot(xFRFn[y_check, :], newZn[y_check, :], 'b', label='Splined')
+                    plt.plot(xFRFn[y_check, :], Zi_s[y_check, :], 'k--', label='Background')
                     plt.xlabel('xFRF')
-                    plt.ylabel('splined Z (m)')
+                    plt.ylabel('Z (m)')
+                    plt.legend()
                     plt.savefig(os.path.join(os.path.join(fig_loc[0:85], 'SplineChecks'), fig_name))
                     plt.close()
 
                     fig_name = 'backgroundDEM_' + yrs_dir + '-' + months[jj] + '-' + str(surveys[tt]) + '_Ytrans' + '.png'
-                    plt.plot(yFRFn[:, x_check], newZdiff[:, x_check])
+                    plt.plot(yFRFn[:, x_check], Zn[:, x_check], 'r', label='Original')
+                    plt.plot(yFRFn[:, x_check], newZn[:, x_check], 'b', label='Splined')
+                    plt.plot(yFRFn[:, x_check], Zi_s[:, x_check], 'k--', label='Background')
                     plt.xlabel('yFRF')
-                    plt.ylabel('splined Z (m)')
+                    plt.ylabel('Z (m)')
+                    plt.legend()
                     plt.savefig(os.path.join(os.path.join(fig_loc[0:85], 'SplineChecks'), fig_name))
                     plt.close()
-                    """
 
-                    newZn = Zi_s + newZdiff
 
                     # get my new pretty splined grid
                     newZi = Zi.copy()
                     newZi[y1:y2 + 1, x1:x2 + 1] = newZn
 
                     """
-                    # what happens if I dont spline
-                    Zi_ns = Zi.copy()
-                    Zi_ns[y1:y2 + 1, x1:x2 + 1] = Zn
-                    
-                    
-                    # with splining - the winner?
-                    fig_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\Test Figures'
-                    fig_name = 'UpdatedBathy.png'
-                    plt.contourf(xFRFi, yFRFi, newZi)
-                    plt.axis('equal')
-                    plt.xlabel('xFRF')
-                    plt.ylabel('yFRF')
-                    plt.colorbar()
-                    plt.savefig(os.path.join(fig_loc, fig_name))
-                    plt.close()
-    
-                    # second plot - if I didnt spline
-                    fig_name = 'UpdatedBathy_ns.png'
-                    plt.contourf(xFRFi, yFRFi, Zi_ns)
-                    plt.axis('equal')
-                    plt.xlabel('xFRF')
-                    plt.ylabel('yFRF')
-                    plt.colorbar()
+                    # plot each newZi to see if it looks ok
+                    fig_name = 'backgroundDEM_' + str(surveys[tt]) + '.png'
+                    plt.pcolor(xFRFi_vec, yFRFi_vec, newZi, cmap=plt.cm.jet, vmin=-13, vmax=5)
+                    cbar = plt.colorbar()
+                    cbar.set_label('(m)')
+                    plt.scatter(dataX, dataY, marker='o', c='k', s=1, alpha=0.25, label='Transects')
+                    plt.xlabel('xFRF (m)')
+                    plt.ylabel('yFRF (m)')
+                    plt.legend()
                     plt.savefig(os.path.join(fig_loc, fig_name))
                     plt.close()
                     """
+
 
                 # update Zi for next iteration
                 del Zi
@@ -482,11 +489,11 @@ def makeUpdatedBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, 
                 fig_name = 'backgroundDEM_' + yrs_dir + '-' + months[jj] + '.png'
 
                 plt.figure()
-                plt.pcolor(xFRF, yFRF, elevation[-1, :, :])
+                plt.pcolor(xFRF, yFRF, elevation[-1, :, :], cmap=plt.cm.jet, vmin=-13, vmax=5)
                 cbar = plt.colorbar()
                 cbar.set_label('(m)')
-                plt.scatter(dataX, dataY, marker='o', c='k', s=1, alpha=0.25, label='Transects')
-                plt.plot(CSarray_X, CSarray_Y, 'rX', label='CS-array')
+                # plt.scatter(dataX, dataY, marker='o', c='k', s=1, alpha=0.25, label='Transects')
+                plt.plot(CSarray_X, CSarray_Y, 'rX', label='8m-array')
                 plt.xlabel('xFRF (m)')
                 plt.ylabel('yFRF (m)')
                 plt.legend()
@@ -701,7 +708,7 @@ def subgridBounds(surveyDict, gridDict, xMax=1000, maxSpace=149):
     return out
 
 
-def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, plot=None):
+def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, splineDict=None, plot=None):
     """
 
     :param dSTR_s: string that determines the start date of the times of the surveys you want to use to update the DEM
@@ -712,6 +719,7 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=N
                     no matter what you put here, it will always round it up to the end of the month
     :param dir_loc: place where you want to save the .nc files that get written
                     the function will make the year directories inside of this location on its own.
+    :param url: the url of the ncml file you are going to use for your grids to integrate into the background
     :param scalecDict: keys are:
                         x_smooth - x direction smoothing length for scalecInterp
                         y_smooth - y direction smoothing length for scalecInterp
@@ -756,19 +764,16 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=N
     """
 
     # HARD CODED VARIABLES!!!
-    filelist = ['http://134.164.129.55/thredds/dodsC/FRF/survey/gridded/gridded.ncml']
-    # this is just the location of the ncml for the transects!!!!!
-
-    nc_url = 'http://134.164.129.62:8080/thredds/dodsC/CMTB/grids/UpdatedBackgroundDEM/UpdatedBackgroundDEM.ncml'
+    # background_url = 'http://134.164.129.62:8080/thredds/dodsC/CMTB/grids/UpdatedBackgroundDEM/UpdatedBackgroundDEM.ncml'
     # this is just the location of the ncml for the already created UpdatedDEM
 
     nc_b_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles_gridded'
-    nc_b_name = 'backgroundDEMt0.nc'
+    nc_b_name = 'backgroundDEMt0_TimeMean.nc'
     # these together are the location of the standard background bathymetry that we started from.
 
     # Yaml files for my .nc files!!!!!
     global_yaml = 'C:\Users\dyoung8\PycharmProjects\makebathyinterp\yamls\BATHY\FRFti_global.yml'
-    var_yaml = 'C:\Users\dyoung8\PycharmProjects\makebathyinterp\yamls\BATHY\FRFti_var.yml'
+    var_yaml = 'C:\Users\dyoung8\PycharmProjects\makebathyinterp\yamls\BATHY\FRFti_grid_var.yml'
 
     # CS-array url - I just use this to get the position, not for any data
     cs_array_url = 'http://134.164.129.55/thredds/dodsC/FRF/oceanography/waves/8m-array/2017/FRF-ocean_waves_8m-array_201707.nc'
@@ -846,55 +851,24 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=N
             num_months = int('12') - int('01')
             months = [str(int('01') + int(jj)).zfill(2) for jj in range(0, num_months + 1)]
 
-        # ok, now to make my nc files, I just need to go through and find all surveys that fall in these months
-        bathy = nc.Dataset(filelist[0])
-        # pull down all the times....
-        times = nc.num2date(bathy.variables['time'][:], bathy.variables['time'].units, bathy.variables['time'].calendar)
-
-        all_surveys = bathy.variables['surveyNumber'][:]
 
         for jj in range(0, len(months)):
             # pull out the beginning and end time associated with this month
             d1STR = yrs_dir + '-' + months[jj] + '-01T00:00:00Z'
-            d1 = DT.datetime.strptime(d1STR, '%Y-%m-%dT%H:%M:%SZ')
             if int(months[jj]) == 12:
                 d2STR = str(int(yrs_dir) + 1) + '-' + '01' + '-01T00:00:00Z'
-                d2 = DT.datetime.strptime(d2STR, '%Y-%m-%dT%H:%M:%SZ')
             else:
                 d2STR = yrs_dir + '-' + str(int(months[jj]) + 1) + '-01T00:00:00Z'
-                d2 = DT.datetime.strptime(d2STR, '%Y-%m-%dT%H:%M:%SZ')
 
-            # find some stuff here...
-            mask = (times >= d1) & (times < d2)  # boolean true/false of time
-            idx = np.where(mask)[0]
-
-            # what surveys are in this range?
-            surveys = np.unique(bathy.variables['surveyNumber'][idx])
+            # get the grids that fall within these dates
+            bathy_dict = getGridded(ncml_url, d1STR, d2STR)
 
             # if there are no surveys here, then skip the rest of this loop...
-            if len(surveys) < 1:
+            if bathy_dict is None:
                 print('No surveys found for ' + yrs_dir + '-' + months[jj])
                 continue
             else:
                 pass
-
-            # otherwise..., check to see the times of all the surveys...?
-            for tt in range(0, len(surveys)):
-                ids = (all_surveys == surveys[tt])
-                surv_times = times[ids]
-                # pull out the mean time
-                surv_timeM = surv_times[0] + (surv_times[-1] - surv_times[0]) / 2
-                # round it to nearest 12 hours.
-                surv_timeM = sb.roundtime(surv_timeM, roundTo=1 * 12 * 3600)
-
-                # if the rounded time IS in the month, great
-                if (surv_timeM >= d1) and (surv_timeM < d2):
-                    pass
-                else:
-                    # if not set it to a fill value
-                    surveys[tt] == -1000
-            # drop all the surveys that we decided are not going to go into this monthly file!
-            surveys = surveys[surveys >= 0]
 
             # SEARCH FOR MOST RECENT BATHY HERE!!!
             try:
@@ -904,6 +878,7 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=N
                                        old_bathy.variables['time'].calendar)
 
                 # find newest time prior to this
+                d1 = DT.datetime.strptime(d1STR, '%Y-%m-%dT%H:%M:%SZ')
                 t_mask = (ob_times <= d1)  # boolean true/false of time
                 t_idx = np.where(t_mask)[0][-1]  # I want the MOST RECENT ONE - i.e., the last one
 
@@ -913,9 +888,8 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=N
             except:
                 try:
                     # look for the most up to date bathy in the ncml file....
-                    old_bathy = nc.Dataset(nc_url)
-                    ob_times = nc.num2date(old_bathy.variables['time'][:], old_bathy.variables['time'].units,
-                                           old_bathy.variables['time'].calendar)
+                    old_bathy = nc.Dataset(background_url)
+                    ob_times = nc.num2date(old_bathy.variables['time'][:], old_bathy.variables['time'].units, old_bathy.variables['time'].calendar)
                     # find newest time prior to this
                     t_mask = (ob_times <= d_s)  # boolean true/false of time
                     t_idx = np.where(t_mask)[0][-1]  # I want the MOST RECENT ONE - i.e., the last one
@@ -940,37 +914,62 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=N
             rows, cols = np.shape(xFRFi)
 
             # pre-allocate my netCDF dictionary variables here....
-            elevation = np.zeros((len(surveys), rows, cols))
+            iter_rows = np.shape(bathy_dict['elevation'])[0]
+            elevation = np.zeros((iter_rows, rows, cols))
             xFRF = np.zeros(cols)
             yFRF = np.zeros(rows)
             latitude = np.zeros((rows, cols))
             longitude = np.zeros((rows, cols))
-            surveyNumber = np.zeros(len(surveys))
-            surveyTime = np.zeros(len(surveys))
+            surveyTime = np.zeros(iter_rows)
 
-            # ok, now that I have the list of the surveys I am going to keep.....
-
-            # this doesnt change in time for the grids!!
-            dataX, dataY = [], []
-            xV = bathy['xFRF'][:]
-            yV = bathy['yFRF'][:]
-            # turn this into a grid!!
-            dataX, dataY = np.meshgrid(xV, yV)
-
-            for tt in range(0, len(surveys)):
-
-                # get the times of each survey
-                ids = (all_surveys == surveys[tt])
+            for tt in range(0, iter_rows):
 
                 # pull out this NC stuf!!!!!!!!
+                dataX, dataY = [], []
                 dataZ = []
-                dataZ = bathy['elevation'][ids]
-                dataZ = dataZ[0, :]
-                survNum = bathy['surveyNumber'][ids]
-                stimes = nc.num2date(bathy.variables['time'][ids], bathy.variables['time'].units,bathy.variables['time'].calendar)
-                stimeM = stimes
+                xV, yV = [], []
+                xV = bathy_dict['xFRF']
+                yV = bathy_dict['yFRF']
+                dataZ = bathy_dict['elevation'][tt][:]
 
-                assert len(np.unique(survNum)) == 1, 'MakeUpdatedBathyDEM error: You have pulled down more than one survey number!'
+                # check to see if this is a stupid masked array....
+                if isinstance(dataZ, np.ma.MaskedArray):
+                    if np.sum(dataZ.mask) == 0:
+                        pass
+                    else:
+                        xV = xV[~np.all(dataZ.mask, axis=0)]
+                        yV = yV[~np.all(dataZ.mask, axis=1)]
+                        dataZ = dataZ[~np.all(dataZ.mask, axis=1), :]
+                        dataZ = dataZ[:, ~np.all(dataZ.mask, axis=0)]
+                        if dataZ.ndim == 2:
+                            dataZ = np.ma.expand_dims(dataZ, axis=0)
+                        else:
+                            pass
+                        if len(np.shape(dataZ)) > 2:
+                            dataZ = dataZ[0, :, :]
+                        else:
+                            pass
+                else:
+                    pass
+
+                dataX, dataY = np.meshgrid(xV, yV)
+
+                stimeM = bathy_dict['time'][tt]
+
+
+                # what does this input grid look like
+                fig_name = 'InputGrid_' + yrs_dir + '-' + months[jj] + '_' + str(tt + 1) + '.png'
+                plt.figure()
+                plt.pcolor(xV, yV, dataZ, cmap=plt.cm.jet, vmin=-13, vmax=5)
+                cbar = plt.colorbar()
+                cbar.set_label('(m)')
+                plt.xlabel('xFRF (m)')
+                plt.ylabel('yFRF (m)')
+                plt.legend()
+                plt.savefig(os.path.join(fig_loc, fig_name))
+                plt.close()
+
+
                 assert isinstance(dataZ, np.ndarray), 'MakeUpdatedBathyDEM error: Script only handles np.ndarrays for the grid data at this time!'
 
                 # build my new bathymetry from the FRF transect files
@@ -1025,8 +1024,7 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=N
                 else:
                     pass
 
-
-                print np.unique(survNum)
+                print stimeM
                 dict = {'x0': x0,  # gp.FRFcoord(x0, y0)['Lon'],  # -75.47218285,
                         'y0': y0,  # gp.FRFcoord(x0, y0)['Lat'],  #  36.17560399,
                         'x1': x1,  # gp.FRFcoord(x1, y1)['Lon'],  # -75.75004989,
@@ -1042,9 +1040,9 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=N
                         'grid_coord_check': 'FRF',
                         'grid_filename': '',  # should be none if creating background Grid!  becomes best guess grid
                         'data_coord_check': 'FRF',
-                        'xFRF_s': dataX,
-                        'yFRF_s': dataY,
-                        'Z_s': dataZ,
+                        'xFRF_s': np.reshape(dataX, (np.shape(dataX)[0] * np.shape(dataX)[1], 1)).flatten(),
+                        'yFRF_s': np.reshape(dataY, (np.shape(dataY)[0] * np.shape(dataY)[1], 1)).flatten(),
+                        'Z_s': np.reshape(dataZ, (np.shape(dataZ)[0] * np.shape(dataZ)[1], 1)).flatten(),
                         }
 
                 out = DEM_generator(dict)
@@ -1079,40 +1077,11 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=N
                 newZi = Zi.copy()
                 newZi[y1:y2 + 1, x1:x2 + 1] = newZn
 
-                """
-                # what happens if I dont spline
-                Zi_ns = Zi.copy()
-                Zi_ns[y1:y2 + 1, x1:x2 + 1] = Zn
-
-
-                # with splining - the winner?
-                fig_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\Test Figures'
-                fig_name = 'UpdatedBathy.png'
-                plt.contourf(xFRFi, yFRFi, newZi)
-                plt.axis('equal')
-                plt.xlabel('xFRF')
-                plt.ylabel('yFRF')
-                plt.colorbar()
-                plt.savefig(os.path.join(fig_loc, fig_name))
-                plt.close()
-
-                # second plot - if I didnt spline
-                fig_name = 'UpdatedBathy_ns.png'
-                plt.contourf(xFRFi, yFRFi, Zi_ns)
-                plt.axis('equal')
-                plt.xlabel('xFRF')
-                plt.ylabel('yFRF')
-                plt.colorbar()
-                plt.savefig(os.path.join(fig_loc, fig_name))
-                plt.close()
-                """
-
                 # update Zi for next iteration
                 del Zi
                 Zi = newZi
 
                 elevation[tt, :, :] = newZi
-                surveyNumber[tt] = np.unique(survNum)[0]
                 timeunits = 'seconds since 1970-01-01 00:00:00'
                 surveyTime[tt] = nc.date2num(stimeM, timeunits)
                 # timeM is the mean time between the first and last time of the survey rounded to the nearest 12 hours
@@ -1144,8 +1113,7 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=N
             nc_dict['yFRF'] = yFRF
             nc_dict['latitude'] = latitude
             nc_dict['longitude'] = longitude
-            # also want survey number and survey time....
-            nc_dict['surveyNumber'] = surveyNumber
+            # also want survey time....
             nc_dict['time'] = surveyTime
 
             nc_name = 'backgroundDEM_' + months[jj] + '.nc'
@@ -1173,16 +1141,103 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=N
                 fig_name = 'backgroundDEM_' + yrs_dir + '-' + months[jj] + '.png'
 
                 plt.figure()
-                plt.pcolor(xFRF, yFRF, elevation[-1, :, :])
+                plt.pcolor(xFRF, yFRF, elevation[-1, :, :], cmap=plt.cm.jet, vmin=-13, vmax=5)
                 cbar = plt.colorbar()
                 cbar.set_label('(m)')
-                plt.scatter(dataX, dataY, marker='o', c='k', s=1, alpha=0.25, label='Transects')
-                plt.plot(CSarray_X, CSarray_Y, 'rX', label='CS-array')
+                plt.plot(CSarray_X, CSarray_Y, 'rX', label='8m-array')
                 plt.xlabel('xFRF (m)')
                 plt.ylabel('yFRF (m)')
                 plt.legend()
                 plt.savefig(os.path.join(fig_loc, fig_name))
                 plt.close()
+
+
+def getGridded(ncml_url, d1, d2):
+
+    """
+    :param ncml_url: this is the url of the ncml for the type of data we are going to use.  this script will look
+                      for key phrases in this url in order to tell what the dictionary keys will be!!!
+    :param d1: this is the date STRING of the start time you want to look for!!!!!
+    :param d2: this is the date STRING of the end time you want to look for!!!!!
+    :return: this function will return a dictionary with standardized keys of the bathy information (x, y, z, times)
+                for the particular gridded product, first index of each variable will be time
+                unless it is time invariant (i.e., xFRF. yFRF)
+                keys:
+                xFRF
+                yFRF
+                elevation
+                time - as a DATETIME
+    """
+
+    # convert those strings to datetimes!!!!!
+    d1 = DT.datetime.strptime(d1, '%Y-%m-%dT%H:%M:%SZ')
+    d2 = DT.datetime.strptime(d2, '%Y-%m-%dT%H:%M:%SZ')
+
+    # check to see what product I am supposed to be using?
+    type = None
+    if 'cbathy' in ncml_url:
+        type = 1
+        # this is a cbathy product
+    elif 'lidar' in ncml_url:
+        type = 2
+        # this is a lidar product
+    elif 'survey' in ncml_url:
+        type = 0
+        # this is a regular gridded product
+    else:
+        pass
+
+    assert type is not None, 'getGridded error: the ncml_url provided does not match any known type!'
+
+    if type == 1:
+        print 'cBathy grid functionality not implemented'
+    elif type == 0:
+
+
+        # error testing for Spicer
+        frf_data = getDataFRF.getObs(d1, d2)
+        temp = frf_data.getBathyGridFromNC(method=0)
+
+
+        bathy = nc.Dataset(ncml_url)
+        # pull down all the times....
+        times = nc.num2date(bathy.variables['time'][:], bathy.variables['time'].units, bathy.variables['time'].calendar)
+        mask = (times >= d1) & (times < d2)  # boolean true/false of time
+        idx = np.where(mask)[0]
+
+        # check to see if I have any surveys
+        if len(idx) == 0:
+            out = None
+            print 'No grids found between %s and %s' %(d1, d2)
+        else:
+            out = {}
+            out['xFRF'] = bathy['xFRF'][:]
+            out['yFRF'] = bathy['yFRF'][:]
+            out['elevation'] = bathy['elevation'][idx][:]
+            out['time'] = nc.num2date(bathy.variables['time'][idx], bathy.variables['time'].units, bathy.variables['time'].calendar)
+
+    elif type == 2:
+        print 'LiDAR grid functionality not implemented'
+    else:
+        pass
+
+    return out
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1,0 +1,75 @@
+# stuff
+
+_variables: ['elevation', 'latitude', 'longitude', 'xFRF', 'yFRF', 'time']
+_attributes: ['notes']
+_dimensions: ['time', 'yFRF', 'xFRF']
+
+time:
+    name: 'time'
+    units: 'seconds since 1970-01-01 00:00:00'
+    standard_name: ''
+    long_name: 'UTC Survey Date of the midpoint of the survey rounded to nearest 12 hrs'
+    data_type: 'f8'
+    dim: ['time']
+    calendar: 'gregorian'
+    fill_value: '-999'
+
+yFRF:
+    name: 'yFRF'
+    units: 'm'
+    standard_name: ''
+    long_name: 'along-shore position of each node - m'
+    data_type: 'f8'
+    dim: ['yFRF']
+    fill_value: '-999.99'
+    short_name: 'yFRF'
+    coordinates: 'yFRF'
+    description: 'along-shore position of each node in m FRF coordinates'
+
+xFRF:
+    name: 'xFRF'
+    units: 'm'
+    standard_name: ''
+    long_name: 'cross-shore position of each node - m'
+    data_type: 'f8'
+    dim: ['xFRF']
+    fill_value: '-999.99'
+    short_name: 'xFRF'
+    coordinates: 'xFRF'
+    description: 'cross-shore position of each node in m FRF coordinates'
+
+elevation:
+    name: 'elevation'
+    units: 'm'
+    standard_name: ''
+    long_name: 'bed elevation for the bathymetry nodes'
+    data_type: 'f8'
+    dim: ['time', 'yFRF', 'xFRF']
+    fill_value: '-9999.99'
+    short_name: 'bathy'
+    coordinates: 'surveyNum yFRF xFRF'
+    description: 'Bottom elevation for the bathymetry nodes after incorporating the numbered survey'
+
+latitude:
+    name: 'latitude'
+    units: 'Degrees'
+    standard_name: ''
+    long_name: 'Latitude of each bathymetry node in decimal degrees'
+    data_type: 'f8'
+    dim: ['yFRF', 'xFRF']
+    fill_value: '-999.99'
+    short_name: 'lat'
+    coordinates: 'yFRF xFRF'
+    description: 'Latitude of the bathymetry nodes in decimal degrees'
+
+longitude:
+    name: 'longitude'
+    units: 'Degrees'
+    standard_name: ''
+    long_name: 'Longitude of each bathymetry node in decimal degrees'
+    data_type: 'f8'
+    dim: ['yFRF', 'xFRF']
+    fill_value: '-999.99'
+    short_name: 'lon'
+    coordinates: 'yFRF xFRF'
+    description: 'Longitude of the bathymetry nodes in decimal degrees'
