@@ -5,7 +5,7 @@ from sblib import geoprocess as gp
 from sblib import sblib as sb
 import makenc
 from matplotlib import pyplot as plt
-from bsplineFunctions import bspline_pertgrid
+from bsplineFunctions import bspline_pertgrid, DLY_bspline
 import datetime as DT
 from scalecInterp_python.DEM_generator import DEM_generator
 import pandas as pd
@@ -132,7 +132,7 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
     num_yrs = int(year_end) - int(year_start)
 
     # show time....
-    for ii in range(0, num_yrs + 1):
+    for ii in range(0, num_yrs):
 
         # make year directories!!!
         yrs_dir = str(int(year_start) + int(ii))
@@ -373,12 +373,15 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
 
                     # spline time?
                     wb = 1 - np.divide(MSEn, targetvar + MSEn)
-                    newZdiff = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
+
+
+                    newZdiff = DLY_bspline(Zdiff, splinebctype=10, off=20, lc=1)
+                    #newZdiff = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
 
 
                     newZn = Zi_s + newZdiff
 
-
+                    """
                     # plot X and Y transects from newZdiff to see if it looks correct?
                     # check near the midpoint
                     x_check = int(0.5*len(xFRFn_vec))
@@ -402,7 +405,7 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     plt.legend()
                     plt.savefig(os.path.join(os.path.join(fig_loc[0:85], 'SplineChecks'), fig_name))
                     plt.close()
-
+                    """
 
                     # get my new pretty splined grid
                     newZi = Zi.copy()
@@ -1070,7 +1073,9 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, sp
 
                 # spline time?
                 wb = 1 - np.divide(MSEn, targetvar + MSEn)
-                newZdiff = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
+
+                newZdiff = DLY_bspline(Zdiff, splinebctype=10, off=20, lc=1)
+                #newZdiff = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
                 newZn = Zi_s + newZdiff
 
                 # get my new pretty splined grid
