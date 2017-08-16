@@ -74,6 +74,30 @@ longitude:
     coordinates: 'yFRF xFRF'
     description: 'Longitude of the bathymetry nodes in decimal degrees'
 
+easting:
+    name: 'easting'
+    units: 'm'
+    standard_name: ''
+    long_name: 'easting of each bathymetry node in m'
+    data_type: 'f8'
+    dim: ['yFRF', 'xFRF']
+    fill_value: '-999.99'
+    short_name: 'easting'
+    coordinates: 'yFRF xFRF'
+    description: 'easting of the bathymetry nodes in m'
+
+northing:
+    name: 'northing'
+    units: 'm'
+    standard_name: ''
+    long_name: 'northing of each bathymetry node in m'
+    data_type: 'f8'
+    dim: ['yFRF', 'xFRF']
+    fill_value: '-999.99'
+    short_name: 'northing'
+    coordinates: 'yFRF xFRF'
+    description: 'northing of the bathymetry nodes in m'
+
 surveyNumber:
     name: 'surveyNumber'
     units: ''

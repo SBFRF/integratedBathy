@@ -535,7 +535,23 @@ def bspline_curve(y, ym, am, dx, bctype, aci=None):
     return out
 
 
-def DLY_bspline(Zi, splinebctype=10, off=None, lc=1):
+def DLY_bspline(Zi, splinebctype=10, off=None, lc=None):
+    """
+
+    :param Zi: elevation DIFFERENCE between the new survey data and the background (it splines back to 0..)
+    :param splinebctype: type of edge spline you want it to do, currently supports
+                        10 - 0 slope at edge and at offset node, 0 value at edge
+                        1 - 0 slope at edge and at offset node, retains original edge value
+                        0 - linear fit slope between 0 at edge and offset node
+
+    :param off: number of nodes you doing the spline over.  so if off = 5, the spline function will be gernerated
+                between the edge and the node 5 nodes away from the edge.  If handed a tuple it assumes
+                the first value is off_x and the second off_y.  If this is None it will skip the edge spline.
+    :param lc: the smoothing scales for the big spline of the entire dataset at the end (rather than just the ends).
+                If this is None it will skip the big spline
+    :return: Modified Zn based on input parameters.
+            Note that if off=None AND lc=None, this function will make NO changes to the bathymetry difference!!!
+    """
 
     # I'm going to write my own bspline function and see if that does any better than the one I have been using
 
@@ -595,8 +611,10 @@ def DLY_bspline(Zi, splinebctype=10, off=None, lc=1):
             Z_Rn = np.flip(Z_Rin, 0)
             Zi[jj, -1 * (off_x + 1):] = Z_Rn.copy()
 
-
-    Zn = signal.cspline2d(Zi, lc)
+    if lc is None:
+        Zn = Zi.copy()
+    else:
+        Zn = signal.cspline2d(Zi, lc)
 
 
     """
@@ -628,6 +646,15 @@ def DLY_bspline(Zi, splinebctype=10, off=None, lc=1):
 
 
 def edge_spline(Z, splinebctype):
+    """
+    :param Z:  1D array of elevations (nominally from edge to offset node)
+    :param splinebctype: type of edge spline you want it to do, currently supports
+                        10 - 0 slope at edge and at offset node, 0 value at edge
+                        1 - 0 slope at edge and at offset node, retains original edge value
+                        0 - linear fit slope between 0 at edge and offset node
+    :return: Zn, new values for the 1d array of elevations based on either a cubic
+            or linear function fit to the first and last points of Z
+    """
     # this is the little function I wrote just to deal with the edges of my new surface.
     # All it does is take in some input data and return the results
     # of either a cubic or linear fxn based on splinebctype

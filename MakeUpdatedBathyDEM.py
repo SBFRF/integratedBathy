@@ -106,12 +106,14 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
         dxm = 2
         dxi = 1
         targetvar = 0.45
+        off = 10
     else:
         splinebctype = splineDict['splinebctype']
         lc = splineDict['lc']
         dxm = splineDict['dxm']
         dxi = splineDict['dxi']
         targetvar = splineDict['targetvar']
+        off = splineDict['off']
 
 
     # force the survey to start at the first of the month and end at the last of the month!!!!
@@ -375,7 +377,7 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     wb = 1 - np.divide(MSEn, targetvar + MSEn)
 
 
-                    newZdiff = DLY_bspline(Zdiff, splinebctype=10, off=20, lc=1)
+                    newZdiff = DLY_bspline(Zdiff, splinebctype=splinebctype, off=off, lc=lc)
                     #newZdiff = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
 
 
@@ -447,14 +449,20 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
             temp = gp.ncsp2LatLon(test['StateplaneE'], test['StateplaneN'])
             lat_vec = temp['lat']
             lon_vec = temp['lon']
+            E_vec = test['StateplaneE']
+            N_vec = test['StateplaneN']
 
             lat = lat_vec.reshape(xFRFi.shape[0], xFRFi.shape[1])
             lon = lon_vec.reshape(xFRFi.shape[0], xFRFi.shape[1])
+            E = E_vec.reshape(xFRFi.shape[0], xFRFi.shape[1])
+            N = N_vec.reshape(xFRFi.shape[0], xFRFi.shape[1])
 
             xFRF = xFRFi[0, :]
             yFRF = yFRFi[:, 1]
             latitude = lat
             longitude = lon
+            easting = E
+            northing = N
 
             # write the nc_file for this month, like a boss, with greatness
             nc_dict = {}
@@ -463,11 +471,13 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
             nc_dict['yFRF'] = yFRF
             nc_dict['latitude'] = latitude
             nc_dict['longitude'] = longitude
+            nc_dict['easting'] = easting
+            nc_dict['northing'] = northing
             # also want survey number and survey time....
             nc_dict['surveyNumber'] = surveyNumber
             nc_dict['time'] = surveyTime
 
-            nc_name = 'backgroundDEM_' + months[jj] + '.nc'
+            nc_name = 'FRF-updated_bathy_dem_transects_+' + yrs_dir + months[jj] + '.nc'
 
             # save this location for next time through the loop
             prev_nc_name = nc_name
@@ -797,12 +807,14 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, sp
         dxm = 2
         dxi = 1
         targetvar = 0.45
+        off = 10
     else:
         splinebctype = splineDict['splinebctype']
         lc = splineDict['lc']
         dxm = splineDict['dxm']
         dxi = splineDict['dxi']
         targetvar = splineDict['targetvar']
+        off = splineDict['off']
 
     # force the survey to start at the first of the month and end at the last of the month!!!!
     dSTR_s = dSTR_s[0:7] + '-01T00:00:00Z'
@@ -1074,7 +1086,7 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, sp
                 # spline time?
                 wb = 1 - np.divide(MSEn, targetvar + MSEn)
 
-                newZdiff = DLY_bspline(Zdiff, splinebctype=10, off=20, lc=1)
+                newZdiff = DLY_bspline(Zdiff, splinebctype=splinebctype, off=off, lc=lc)
                 #newZdiff = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
                 newZn = Zi_s + newZdiff
 
@@ -1102,14 +1114,20 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, sp
             temp = gp.ncsp2LatLon(test['StateplaneE'], test['StateplaneN'])
             lat_vec = temp['lat']
             lon_vec = temp['lon']
+            E_vec = test['StateplaneE']
+            N_vec = test['StateplaneN']
 
             lat = lat_vec.reshape(xFRFi.shape[0], xFRFi.shape[1])
             lon = lon_vec.reshape(xFRFi.shape[0], xFRFi.shape[1])
+            E = E_vec.reshape(xFRFi.shape[0], xFRFi.shape[1])
+            N = N_vec.reshape(xFRFi.shape[0], xFRFi.shape[1])
 
             xFRF = xFRFi[0, :]
             yFRF = yFRFi[:, 1]
             latitude = lat
             longitude = lon
+            easting = E
+            northing = N
 
             # write the nc_file for this month, like a boss, with greatness
             nc_dict = {}
@@ -1118,10 +1136,12 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, sp
             nc_dict['yFRF'] = yFRF
             nc_dict['latitude'] = latitude
             nc_dict['longitude'] = longitude
+            nc_dict['northing'] = northing
+            nc_dict['easting'] = easting
             # also want survey time....
             nc_dict['time'] = surveyTime
 
-            nc_name = 'backgroundDEM_' + months[jj] + '.nc'
+            nc_name = 'FRF-updated_bathy_dem_grids_+' + yrs_dir + months[jj] + '.nc'
 
             # save this location for next time through the loop
             prev_nc_name = nc_name
