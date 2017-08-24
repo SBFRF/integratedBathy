@@ -75,7 +75,7 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
     filelist = ['http://134.164.129.55/thredds/dodsC/FRF/geomorphology/elevationTransects/survey/surveyTransects.ncml']
     # this is just the location of the ncml for the transects!!!!!
 
-    nc_url = 'http://134.164.129.62:8080/thredds/dodsC/CMTB/grids/UpdatedBackgroundDEM/UpdatedBackgroundDEM.ncml'
+    # nc_url = 'http://134.164.129.62:8080/thredds/dodsC/CMTB/grids/UpdatedBackgroundDEM/UpdatedBackgroundDEM.ncml'
     # this is just the location of the ncml for the already created UpdatedDEM
 
     nc_b_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles'
@@ -360,6 +360,29 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     xFRFn_vec = out['x_out']
                     yFRFn_vec = out['y_out']
 
+                    """
+                    # Fig 4 in the TN?
+                    # what does the new grid look like.
+                    fig_name = 'newSurveyGrid_' + str(surveys[tt]) + '.png'
+                    temp_fig_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TechNote\Figures'
+                    plt.pcolor(xFRFn_vec, yFRFn_vec, Zn, cmap=plt.cm.jet, vmin=-10, vmax=3)
+                    cbar = plt.colorbar()
+                    cbar.set_label('Elevation ($m$)', fontsize=16)
+                    plt.scatter(dataX, dataY, marker='o', c='k', s=1, alpha=0.25, label='Transects')
+                    plt.xlabel('xFRF ($m$)', fontsize=16)
+                    plt.ylabel('yFRF ($m$)', fontsize=16)
+                    plt.legend(prop={'size': 14})
+                    plt.tick_params(axis='both', which='major', labelsize=12)
+                    plt.tick_params(axis='both', which='minor', labelsize=10)
+                    ax1 = plt.gca()
+                    ax1.spines['right'].set_visible(False)
+                    ax1.spines['top'].set_visible(False)
+                    plt.axis('tight')
+                    plt.tight_layout()
+                    plt.savefig(os.path.join(temp_fig_loc, fig_name))
+                    plt.close()
+                    """
+
                     # make my the mesh for the new subgrid
                     xFRFn, yFRFn = np.meshgrid(xFRFn_vec, yFRFn_vec)
 
@@ -377,41 +400,64 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     wb = 1 - np.divide(MSEn, targetvar + MSEn)
 
 
-                    newZdiff = DLY_bspline(Zdiff, splinebctype=splinebctype, off=off, lc=lc)
-                    #newZdiff = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
+                    newZdiff = DLY_bspline(Zdiff, splinebctype=splinebctype, off=off, lc=None)
+                    newZdiff2 = bspline_pertgrid(newZdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
+                    # newZdiff2 = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
 
 
-                    newZn = Zi_s + newZdiff
+                    newZn = Zi_s + newZdiff2
 
                     """
+                    # Fig 5 in the TN?
+                    # location of these figures
+                    temp_fig_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TechNote\Figures'
+
                     # plot X and Y transects from newZdiff to see if it looks correct?
                     # check near the midpoint
                     x_check = int(0.5*len(xFRFn_vec))
                     y_check = int(0.5 * len(yFRFn_vec))
-                    fig_name = 'backgroundDEM_' + yrs_dir + '-' + months[jj] + '-' + str(surveys[tt]) + '_Xtrans' + '.png'
-                    plt.plot(xFRFn[y_check, :], Zn[y_check, :], 'r', label='Original')
-                    plt.plot(xFRFn[y_check, :], newZn[y_check, :], 'b', label='Splined')
-                    plt.plot(xFRFn[y_check, :], Zi_s[y_check, :], 'k--', label='Background')
-                    plt.xlabel('xFRF')
-                    plt.ylabel('Z (m)')
-                    plt.legend()
-                    plt.savefig(os.path.join(os.path.join(fig_loc[0:85], 'SplineChecks'), fig_name))
-                    plt.close()
+                    fig_name = 'backgroundDEM_' + yrs_dir + '-' + months[jj] + '-' + str(surveys[tt]) + '_XY_trans' + '.png'
 
-                    fig_name = 'backgroundDEM_' + yrs_dir + '-' + months[jj] + '-' + str(surveys[tt]) + '_Ytrans' + '.png'
-                    plt.plot(yFRFn[:, x_check], Zn[:, x_check], 'r', label='Original')
-                    plt.plot(yFRFn[:, x_check], newZn[:, x_check], 'b', label='Splined')
-                    plt.plot(yFRFn[:, x_check], Zi_s[:, x_check], 'k--', label='Background')
-                    plt.xlabel('yFRF')
-                    plt.ylabel('Z (m)')
-                    plt.legend()
-                    plt.savefig(os.path.join(os.path.join(fig_loc[0:85], 'SplineChecks'), fig_name))
+                    fig = plt.figure(figsize=(8, 6))
+                    ax1 = plt.subplot2grid((2, 1), (0, 0), colspan=1)
+                    ax1.plot(xFRFn[y_check, :], Zn[y_check, :], 'r', label='Original')
+                    ax1.plot(xFRFn[y_check, :], newZn[y_check, :], 'b', label='Splined')
+                    ax1.plot(xFRFn[y_check, :], Zi_s[y_check, :], 'k--', label='Background')
+                    ax1.set_xlabel('xFRF ($m$)', fontsize=16)
+                    ax1.set_ylabel('Elevation ($m$)', fontsize=16)
+                    for tick in ax1.xaxis.get_major_ticks():
+                        tick.label.set_fontsize(14)
+                    for tick in ax1.yaxis.get_major_ticks():
+                        tick.label.set_fontsize(14)
+                    ax1.tick_params(labelsize=14)
+                    ax1.legend()
+                    ax1.text(0.10, 0.95, '(a)', horizontalalignment='left', verticalalignment='top', transform=ax1.transAxes, fontsize=16)
+
+                    ax2 = plt.subplot2grid((2, 1), (1, 0), colspan=1)
+                    ax2.plot(yFRFn[:, x_check], Zn[:, x_check], 'r', label='Original')
+                    ax2.plot(yFRFn[:, x_check], newZn[:, x_check], 'b', label='Splined')
+                    ax2.plot(yFRFn[:, x_check], Zi_s[:, x_check], 'k--', label='Background')
+                    ax2.set_xlabel('yFRF ($m$)', fontsize=16)
+                    ax2.set_ylabel('Elevation ($m$)', fontsize=16)
+                    for tick in ax2.xaxis.get_major_ticks():
+                        tick.label.set_fontsize(14)
+                    for tick in ax2.yaxis.get_major_ticks():
+                        tick.label.set_fontsize(14)
+                    ax2.tick_params(labelsize=14)
+                    ax2.legend()
+                    ax2.text(0.10, 0.95, '(b)', horizontalalignment='left', verticalalignment='top', transform=ax2.transAxes, fontsize=16)
+
+                    fig.subplots_adjust(wspace=0.4, hspace=0.1)
+                    fig.tight_layout(pad=1, h_pad=2.5, w_pad=1, rect=[0.0, 0.0, 1.0, 0.925])
+                    fig.savefig(os.path.join(temp_fig_loc, fig_name), dpi=300)
                     plt.close()
                     """
 
                     # get my new pretty splined grid
                     newZi = Zi.copy()
                     newZi[y1:y2 + 1, x1:x2 + 1] = newZn
+
+
 
                     """
                     # plot each newZi to see if it looks ok
@@ -477,7 +523,7 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
             nc_dict['surveyNumber'] = surveyNumber
             nc_dict['time'] = surveyTime
 
-            nc_name = 'FRF-updated_bathy_dem_transects_+' + yrs_dir + months[jj] + '.nc'
+            nc_name = 'FRF-updated_bathy_dem_transects_' + yrs_dir + months[jj] + '.nc'
 
             # save this location for next time through the loop
             prev_nc_name = nc_name
@@ -1073,25 +1119,36 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, sp
                 # make my the mesh for the new subgrid
                 xFRFn, yFRFn = np.meshgrid(xFRFn_vec, yFRFn_vec)
 
+                # this is telling you where to plop in your new subgrid into your larger background grid
                 x1 = np.where(xFRFi_vec == min(xFRFn_vec))[0][0]
                 x2 = np.where(xFRFi_vec == max(xFRFn_vec))[0][0]
                 y1 = np.where(yFRFi_vec == min(yFRFn_vec))[0][0]
                 y2 = np.where(yFRFi_vec == max(yFRFn_vec))[0][0]
 
+                # this is where you pull out the overlapping region from the background
+                # so you can take the difference between the original and the subgrid
                 Zi_s = Zi[y1:y2 + 1, x1:x2 + 1]
 
                 # get the difference!!!!
                 Zdiff = Zn - Zi_s
 
                 # spline time?
+
+                # this is the spline weights that you get from the scale C routine
+                # It also incorporates a target variance to bound the weights
                 wb = 1 - np.divide(MSEn, targetvar + MSEn)
 
+                # do my edge spline.  if you do Meg's spline afterwards set lc=None!
+                # (otherwise it will run its own bspline over the whole thing!!!)
                 newZdiff = DLY_bspline(Zdiff, splinebctype=splinebctype, off=off, lc=lc)
-                #newZdiff = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
-                newZn = Zi_s + newZdiff
+                # this is Meg's spline of the whole thing
+                newZdiff2 = bspline_pertgrid(newZdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
+                # add back the new difference to get your new subgrid bathymetry
+                newZn = Zi_s + newZdiff2
 
                 # get my new pretty splined grid
                 newZi = Zi.copy()
+                # replace the subgrid nodes with the new bathymetry
                 newZi[y1:y2 + 1, x1:x2 + 1] = newZn
 
                 # update Zi for next iteration
@@ -1141,7 +1198,7 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, sp
             # also want survey time....
             nc_dict['time'] = surveyTime
 
-            nc_name = 'FRF-updated_bathy_dem_grids_+' + yrs_dir + months[jj] + '.nc'
+            nc_name = 'FRF-updated_bathy_dem_grids_' + yrs_dir + months[jj] + '.nc'
 
             # save this location for next time through the loop
             prev_nc_name = nc_name
@@ -1215,7 +1272,13 @@ def getGridded(ncml_url, d1, d2):
     assert type is not None, 'getGridded error: the ncml_url provided does not match any known type!'
 
     if type == 1:
-        print 'cBathy grid functionality not implemented'
+
+        frf_data = getDataFRF.getObs(d1, d2)
+        temp = frf_data.getBathyGridcBathy(xbound=[0, 500], ybound=[0, 1000])
+        # DLY note - this function is doing something funny and I have not figured out why yet.
+        t = 1
+
+
     elif type == 0:
 
 
