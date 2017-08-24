@@ -1140,7 +1140,7 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, sp
 
                 # do my edge spline.  if you do Meg's spline afterwards set lc=None!
                 # (otherwise it will run its own bspline over the whole thing!!!)
-                newZdiff = DLY_bspline(Zdiff, splinebctype=splinebctype, off=off, lc=lc)
+                newZdiff = DLY_bspline(Zdiff, splinebctype=splinebctype, off=off, lc=None)
                 # this is Meg's spline of the whole thing
                 newZdiff2 = bspline_pertgrid(newZdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
                 # add back the new difference to get your new subgrid bathymetry
