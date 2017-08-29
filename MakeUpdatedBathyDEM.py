@@ -134,7 +134,7 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
     num_yrs = int(year_end) - int(year_start)
 
     # show time....
-    for ii in range(0, num_yrs):
+    for ii in range(0, num_yrs+1):
 
         # make year directories!!!
         yrs_dir = str(int(year_start) + int(ii))
