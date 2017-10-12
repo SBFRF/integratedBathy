@@ -78,7 +78,7 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
     # nc_url = 'http://134.164.129.62:8080/thredds/dodsC/CMTB/grids/UpdatedBackgroundDEM/UpdatedBackgroundDEM.ncml'
     # this is just the location of the ncml for the already created UpdatedDEM
 
-    nc_b_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles'
+    nc_b_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles_WA'
     nc_b_name = 'backgroundDEMt0_TimeMean.nc'
     # these together are the location of the standard background bathymetry that we started from.
 
@@ -89,7 +89,7 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
     # CS-array url - I just use this to get the position, not for any data
     cs_array_url = 'http://134.164.129.55/thredds/dodsC/FRF/oceanography/waves/8m-array/2017/FRF-ocean_waves_8m-array_201707.nc'
     # where do I want to save any QA/QC figures
-    fig_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\Test Figures\QAQCfigs_transects'
+    fig_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\Test Figures\QAQCfigs_transects_off20'
 
 
     #check scalecDict and splineDict
@@ -220,8 +220,7 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
             try:
                 # look for the .nc file that I just wrote!!!
                 old_bathy = nc.Dataset(os.path.join(prev_nc_loc, prev_nc_name))
-                ob_times = nc.num2date(old_bathy.variables['time'][:], old_bathy.variables['time'].units,
-                                       old_bathy.variables['time'].calendar)
+                ob_times = nc.num2date(old_bathy.variables['time'][:], old_bathy.variables['time'].units, old_bathy.variables['time'].calendar)
 
                 # find newest time prior to this
                 t_mask = (ob_times <= d1)  # boolean true/false of time
@@ -234,8 +233,7 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                 try:
                     # look for the most up to date bathy in the ncml file....
                     old_bathy = nc.Dataset(nc_url)
-                    ob_times = nc.num2date(old_bathy.variables['time'][:], old_bathy.variables['time'].units,
-                                           old_bathy.variables['time'].calendar)
+                    ob_times = nc.num2date(old_bathy.variables['time'][:], old_bathy.variables['time'].units, old_bathy.variables['time'].calendar)
                     # find newest time prior to this
                     t_mask = (ob_times <= d_s)  # boolean true/false of time
                     t_idx = np.where(t_mask)[0][-1]  # I want the MOST RECENT ONE - i.e., the last one
@@ -317,11 +315,14 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                 gridDict['xFRFi_vec'] = xFRFi_vec
                 gridDict['yFRFi_vec'] = yFRFi_vec
 
-                temp = subgridBounds(surveyDict, gridDict, maxSpace=249)
+                # temp = subgridBounds(surveyDict, gridDict, maxSpace=249)
+                temp = subgridBounds2(surveyDict, gridDict, maxSpace=249)
                 x0 = temp['x0']
                 x1 = temp['x1']
                 y0 = temp['y0']
                 y1 = temp['y1']
+                max_spacing = temp['max_spacing']
+
                 del temp
 
                 # if you wound up throwing out this survey!!!
@@ -329,6 +330,14 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     newZi = Zi
 
                 else:
+
+                    # if the max spacing is too high, bump up the smoothing!!
+                    y_smooth_u = y_smooth  # reset y_smooth if I changed it during last step
+                    if 2 * max_spacing > y_smooth:
+                        y_smooth_u = int(dy * round(float(2 * max_spacing) / dy))
+                    else:
+                        pass
+
                     print np.unique(survNum)
                     dict = {'x0': x0,  # gp.FRFcoord(x0, y0)['Lon'],  # -75.47218285,
                             'y0': y0,  # gp.FRFcoord(x0, y0)['Lat'],  #  36.17560399,
@@ -338,7 +347,7 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                             # grid spacing in x  -  Here is where CMS would hand array of variable grid spacing
                             'lambdaY': dy,  # grid spacing in y
                             'msmoothx': x_smooth,  # smoothing length scale in x
-                            'msmoothy': y_smooth,  # smoothing length scale in y
+                            'msmoothy': y_smooth_u,  # smoothing length scale in y
                             'msmootht': 1,  # smoothing length scale in Time
                             'filterName': 'hanning',
                             'nmseitol': 0.75,
@@ -360,7 +369,7 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     xFRFn_vec = out['x_out']
                     yFRFn_vec = out['y_out']
 
-                    """
+
                     # Fig 4 in the TN?
                     # what does the new grid look like.
                     fig_name = 'newSurveyGrid_' + str(surveys[tt]) + '.png'
@@ -369,8 +378,8 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     cbar = plt.colorbar()
                     cbar.set_label('Elevation ($m$)', fontsize=16)
                     plt.scatter(dataX, dataY, marker='o', c='k', s=1, alpha=0.25, label='Transects')
-                    plt.xlabel('xFRF ($m$)', fontsize=16)
-                    plt.ylabel('yFRF ($m$)', fontsize=16)
+                    plt.xlabel('Cross-shore - $x$ ($m$)', fontsize=16)
+                    plt.ylabel('Alongshore - $y$ ($m$)', fontsize=16)
                     plt.legend(prop={'size': 14})
                     plt.tick_params(axis='both', which='major', labelsize=12)
                     plt.tick_params(axis='both', which='minor', labelsize=10)
@@ -381,7 +390,7 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     plt.tight_layout()
                     plt.savefig(os.path.join(temp_fig_loc, fig_name))
                     plt.close()
-                    """
+
 
                     # make my the mesh for the new subgrid
                     xFRFn, yFRFn = np.meshgrid(xFRFn_vec, yFRFn_vec)
@@ -407,24 +416,32 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
 
                     newZn = Zi_s + newZdiff2
 
-                    """
+
                     # Fig 5 in the TN?
+                    # sample cross sections!!!!!!
+
                     # location of these figures
-                    temp_fig_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TechNote\Figures'
+                    temp_fig_loc = fig_loc
+
+                    x_loc_check1 = int(100)
+                    x_loc_check2 = int(200)
+                    x_loc_check3 = int(350)
+                    x_check1 = np.where(xFRFn_vec == x_loc_check1)[0][0]
+                    x_check2 = np.where(xFRFn_vec == x_loc_check2)[0][0]
+                    x_check3 = np.where(xFRFn_vec == x_loc_check3)[0][0]
+
 
                     # plot X and Y transects from newZdiff to see if it looks correct?
-                    # check near the midpoint
-                    x_check = int(0.5*len(xFRFn_vec))
-                    y_check = int(0.5 * len(yFRFn_vec))
-                    fig_name = 'backgroundDEM_' + yrs_dir + '-' + months[jj] + '-' + str(surveys[tt]) + '_XY_trans' + '.png'
+                    fig_name = 'backgroundDEM_' + yrs_dir + '-' + months[jj] + '-' + str(surveys[tt]) + '_Ytrans_X' + str(x_loc_check1) + '_X' + str(x_loc_check2) + '_X' + str(x_loc_check3) + '.png'
 
-                    fig = plt.figure(figsize=(8, 6))
-                    ax1 = plt.subplot2grid((2, 1), (0, 0), colspan=1)
-                    ax1.plot(xFRFn[y_check, :], Zn[y_check, :], 'r', label='Original')
-                    ax1.plot(xFRFn[y_check, :], newZn[y_check, :], 'b', label='Splined')
-                    ax1.plot(xFRFn[y_check, :], Zi_s[y_check, :], 'k--', label='Background')
-                    ax1.set_xlabel('xFRF ($m$)', fontsize=16)
+                    fig = plt.figure(figsize=(8, 9))
+                    ax1 = plt.subplot2grid((3, 1), (0, 0), colspan=1)
+                    ax1.plot(yFRFn[:, x_check1], Zn[:, x_check1], 'r', label='Original')
+                    ax1.plot(yFRFn[:, x_check1], newZn[:, x_check1], 'b', label='Splined')
+                    ax1.plot(yFRFn[:, x_check1], Zi_s[:, x_check1], 'k--', label='Background')
+                    ax1.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
                     ax1.set_ylabel('Elevation ($m$)', fontsize=16)
+                    ax1.set_title('$X=%s$' %(str(x_loc_check1)), fontsize=16)
                     for tick in ax1.xaxis.get_major_ticks():
                         tick.label.set_fontsize(14)
                     for tick in ax1.yaxis.get_major_ticks():
@@ -433,12 +450,13 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     ax1.legend()
                     ax1.text(0.10, 0.95, '(a)', horizontalalignment='left', verticalalignment='top', transform=ax1.transAxes, fontsize=16)
 
-                    ax2 = plt.subplot2grid((2, 1), (1, 0), colspan=1)
-                    ax2.plot(yFRFn[:, x_check], Zn[:, x_check], 'r', label='Original')
-                    ax2.plot(yFRFn[:, x_check], newZn[:, x_check], 'b', label='Splined')
-                    ax2.plot(yFRFn[:, x_check], Zi_s[:, x_check], 'k--', label='Background')
-                    ax2.set_xlabel('yFRF ($m$)', fontsize=16)
+                    ax2 = plt.subplot2grid((3, 1), (1, 0), colspan=1)
+                    ax2.plot(yFRFn[:, x_check2], Zn[:, x_check2], 'r', label='Original')
+                    ax2.plot(yFRFn[:, x_check2], newZn[:, x_check2], 'b', label='Splined')
+                    ax2.plot(yFRFn[:, x_check2], Zi_s[:, x_check2], 'k--', label='Background')
+                    ax2.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
                     ax2.set_ylabel('Elevation ($m$)', fontsize=16)
+                    ax2.set_title('$X=%s$' % (str(x_loc_check2)), fontsize=16)
                     for tick in ax2.xaxis.get_major_ticks():
                         tick.label.set_fontsize(14)
                     for tick in ax2.yaxis.get_major_ticks():
@@ -447,15 +465,31 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     ax2.legend()
                     ax2.text(0.10, 0.95, '(b)', horizontalalignment='left', verticalalignment='top', transform=ax2.transAxes, fontsize=16)
 
+                    ax3 = plt.subplot2grid((3, 1), (2, 0), colspan=1)
+                    ax3.plot(yFRFn[:, x_check3], Zn[:, x_check3], 'r', label='Original')
+                    ax3.plot(yFRFn[:, x_check3], newZn[:, x_check3], 'b', label='Splined')
+                    ax3.plot(yFRFn[:, x_check3], Zi_s[:, x_check3], 'k--', label='Background')
+                    ax3.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
+                    ax3.set_ylabel('Elevation ($m$)', fontsize=16)
+                    ax3.set_title('$X=%s$' % (str(x_loc_check3)), fontsize=16)
+                    for tick in ax3.xaxis.get_major_ticks():
+                        tick.label.set_fontsize(14)
+                    for tick in ax3.yaxis.get_major_ticks():
+                        tick.label.set_fontsize(14)
+                    ax3.tick_params(labelsize=14)
+                    ax3.legend()
+                    ax3.text(0.10, 0.95, '(c)', horizontalalignment='left', verticalalignment='top', transform=ax3.transAxes, fontsize=16)
+
                     fig.subplots_adjust(wspace=0.4, hspace=0.1)
                     fig.tight_layout(pad=1, h_pad=2.5, w_pad=1, rect=[0.0, 0.0, 1.0, 0.925])
                     fig.savefig(os.path.join(temp_fig_loc, fig_name), dpi=300)
                     plt.close()
-                    """
+
 
                     # get my new pretty splined grid
                     newZi = Zi.copy()
                     newZi[y1:y2 + 1, x1:x2 + 1] = newZn
+
 
 
 
@@ -1308,6 +1342,225 @@ def getGridded(ncml_url, d1, d2):
         print 'LiDAR grid functionality not implemented'
     else:
         pass
+
+    return out
+
+
+def subgridBounds2(surveyDict, gridDict, xMax=1290, maxSpace=149):
+    """
+    # this function determines the bounds of the subgrid we are going to generate from the trasect data
+
+    # basic logic is that first we are only going to use the largest block of consecutive profile lines
+    for which the mean yFRF position does not exceed maxSpace.  Then, of those that remain,
+    the x bounds are the medians of the minimum x and maximum x of each profile line.
+    The y-bounds are the min and max y positions observed
+    # these numbers are always rounded down to the nearest dx (or dy) - rounded up for negative numbers...
+
+    :param surveyDict: keys:
+                        dataX - x data from the survey
+                        dataY - y data from the survey
+                        profNum - profile numbers from the survey
+    :param gridDict: keys:
+                        dx - dx of background grid
+                        dy - dy of background grid
+                        xFRFi_vec - xFRF positions of your background grid
+                        yFRFi_vec - yFRF positions of your background grid
+
+    :param xMax: maximum allowable x for the transects (i.e., the max x of the subgrid may never exceed this value)
+                    default is xFRF = 1000 m
+    :param maxSpace: maximum allowable spacing between the profile lines (in the alongshore direction)
+                    default is 149 m in the yFRF direction BUT I THINK THIS IS TOO SMALL!!!!!
+    :return:
+        dictionary containing the coordinates of
+    """
+
+    dataX = surveyDict['dataX']
+    dataY = surveyDict['dataY']
+    profNum = surveyDict['profNum']
+
+    dx = gridDict['dx']
+    dy = gridDict['dy']
+    xFRFi_vec = gridDict['xFRFi_vec']
+    yFRFi_vec = gridDict['yFRFi_vec']
+
+    # divide my survey up into the survey lines!!!
+    profNum_list = np.unique(profNum)
+    prof_minX = np.zeros(np.shape(profNum_list))
+    prof_maxX = np.zeros(np.shape(profNum_list))
+    prof_minY = np.zeros(np.shape(profNum_list))
+    prof_maxY = np.zeros(np.shape(profNum_list))
+    prof_meanY = np.zeros(np.shape(profNum_list))
+
+    for ss in range(0, len(profNum_list)):
+        # get mean y-values of each line
+        Yprof = dataY[np.where(profNum == profNum_list[ss])]
+        prof_meanY[ss] = np.mean(Yprof)
+
+    #stick this in pandas df
+    columns = ['profNum']
+    df = pd.DataFrame(profNum_list, columns=columns)
+    df['prof_meanY'] = prof_meanY
+    # sort them by mean Y
+    df.sort_values(['prof_meanY'], ascending=1, inplace=True)
+    #reindex
+    df.reset_index(drop=True, inplace=True)
+
+    # figure out the differences!!!!!
+    df['prof_meanY_su'] = df['prof_meanY'].shift(1)
+    df['diff1'] = df['prof_meanY'] - df['prof_meanY_su']
+    del df['prof_meanY_su']
+
+    df['prof_meanY_sd'] = df['prof_meanY'].shift(-1)
+    df['diff2'] = df['prof_meanY'] - df['prof_meanY_sd']
+    del df['prof_meanY_sd']
+
+    # ok, this tricky little piece of code lets you look both directions
+    df['check1'] = np.where((abs(df['diff1']) <= maxSpace), 1, 0)
+    df['check2'] = np.where((abs(df['diff2']) <= maxSpace), 1, 0)
+    df['sum_check'] = df['check1'] + df['check2']
+    del df['check1']
+    del df['check2']
+    # i want to find the biggest piece that works in both directions.
+    # then I''l tack on the leading and trailing profiles at the end! if they exist that is...
+    df['check'] = np.where((df['sum_check'] == 2), 1, 0)
+    del df['sum_check']
+
+
+
+    #this is some clever script I found on the interwebs, it divides the script into blocks of consecutive
+    #jetty in's and jetty out sections
+    df['block'] = (df.check.shift(1) != df.check).astype(int).cumsum()
+    df['Counts'] = df.groupby(['block'])['check'].transform('count')
+
+    #pull out the largest continuous block of inside the jetty and outside the jetty data!
+    df_sub = df[df['check'] == 1]
+    df_sub = df_sub[df_sub['Counts'] == df_sub['Counts'].max()]
+    #if I have more than one block (because I have blocks of the same length) then just take the first one
+    if len(df_sub['block'].unique()) > 1:
+        df_sub = df_sub[df_sub['block'] == df_sub['block'].min()]
+    else:
+        pass
+
+    # also include the line numbers immediately above and below this as well!!! (if they exist)
+    try:
+        df_sub = df_sub.append(df.iloc[int(min(df_sub.index) - 1)])
+    except:
+        pass
+
+    try:
+        df_sub = df_sub.append(df.iloc[int(max(df_sub.index) + 1)])
+    except:
+        pass
+
+    del profNum_list
+    del prof_minX
+    del prof_maxX
+    del prof_minY
+    del prof_maxY
+    del prof_meanY
+
+    # sort them by mean Y
+    df_sub.sort_values(['prof_meanY'], ascending=1, inplace=True)
+
+    df_sub.reset_index(drop=True, inplace=True)
+    profNum_list = df_sub['profNum'].apply(np.array)
+
+    prof_minX = np.zeros(np.shape(profNum_list))
+    prof_maxX = np.zeros(np.shape(profNum_list))
+    prof_minY = np.zeros(np.shape(profNum_list))
+    prof_maxY = np.zeros(np.shape(profNum_list))
+
+    if np.size(profNum_list) == 0:
+        out = {}
+        out['x0'] = None
+        out['x1'] = None
+        out['y0'] = None
+        out['y1'] = None
+        out['max_spacing'] = None
+
+    else:
+
+        # report the max spacing of my remaining lines
+        max_spacing = np.nanmax(np.diff(df_sub['prof_meanY']))
+
+        for ss in range(0, len(profNum_list)):
+            # pull out all x-values corresponding to this profNum
+            Xprof = dataX[np.where(profNum == profNum_list[ss])]
+            Yprof = dataY[np.where(profNum == profNum_list[ss])]
+            prof_minX[ss] = min(Xprof)
+            prof_maxX[ss] = max(Xprof)
+            prof_minY[ss] = min(Yprof)
+            prof_maxY[ss] = max(Yprof)
+
+            # round it to nearest dx or dy
+            # minX
+            if prof_minX[ss] >= 0:
+                prof_minX[ss] = prof_minX[ss] - (prof_minX[ss] % dx)
+            else:
+                prof_minX[ss] = prof_minX[ss] - (prof_minX[ss] % dx) + dx
+
+            # maxX
+            if prof_maxX[ss] >= 0:
+                prof_maxX[ss] = prof_maxX[ss] - (prof_maxX[ss] % dx)
+            else:
+                prof_maxX[ss] = prof_maxX[ss] - (prof_maxX[ss] % dx) + dx
+
+            # minY
+            if prof_minY[ss] >= 0:
+                prof_minY[ss] = prof_minY[ss] - (prof_minY[ss] % dy)
+            else:
+                prof_minY[ss] = prof_minY[ss] - (prof_minY[ss] % dy) + dy
+
+            # maxY
+            if prof_maxY[ss] >= 0:
+                prof_maxY[ss] = prof_maxY[ss] - (prof_maxY[ss] % dy)
+            else:
+                prof_maxY[ss] = prof_maxY[ss] - (prof_maxY[ss] % dy) + dy
+
+
+        #do not allow any prof_maxX to exceed xMax
+        prof_maxX[prof_maxX > xMax] = xMax
+
+        # ok, I am going to force the DEM generator function to always go to the grid specified by these bounds!!
+        # if you want to hand it a best guess grid, i.e., 'grid_filename' make SURE it has these bounds!!!!!!
+        # or just don't hand it grid_filename....
+        x0, y0 = 1.5*np.median(prof_maxX), np.max(prof_maxY)
+
+        # can't exceed longest profile line length
+        if x0 > max(prof_maxX):
+            x0 = max(prof_maxX)
+        else:
+            pass
+
+        x1, y1 = np.median(prof_minX), np.min(prof_minY)
+        # currently using the median of the min and max X extends of each profile,
+        # and just the min and max of the y-extents of all the profiles.
+
+        # check to see if this is past the bounds of your background DEM.
+        # if so, truncate so that it does not exceed.
+        if x0 > max(xFRFi_vec):
+            x0 = xMax
+        else:
+            pass
+        if x1 < min(xFRFi_vec):
+            x1 = min(xFRFi_vec)
+        else:
+            pass
+        if y0 > max(yFRFi_vec):
+            y0 = max(yFRFi_vec)
+        else:
+            pass
+        if y1 < min(yFRFi_vec):
+            y1 = min(yFRFi_vec)
+        else:
+            pass
+
+        out = {}
+        out['x0'] = x0
+        out['x1'] = x1
+        out['y0'] = y0
+        out['y1'] = y1
+        out['max_spacing'] = max_spacing
 
     return out
 

@@ -579,6 +579,16 @@ def DLY_bspline(Zi, splinebctype=10, off=None, lc=None):
         assert off_x is not None, 'DLY_bspline error: input for edge spline offset not recognized'
 
         # make sure off is not too large!!!!!
+        if off_y >= 0.5*rows:
+            off_y = int(0.5*rows - 1)
+        else:
+            pass
+
+        if off_x >= 0.5*cols:
+            off_x = int(0.5*cols - 1)
+        else:
+            pass
+
         assert off_y < 0.5*rows, 'DLY_bspline error: edge spline y-offset may not exceed half of the number of rows in Zi'
         assert off_x < 0.5 * cols, 'DLY_bspline error: edge spline x-offset may not exceed half of the number of columns in Zi'
 

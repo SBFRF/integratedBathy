@@ -662,7 +662,7 @@ def makenc_CSHORErun(ofname, dataDict, globalYaml, varYaml):
     # close file
     fid.close()
 
-def makenc_intBATHY(ofname, dataDict, globalYaml, varYaml):
+def makenc_initBATHY(ofname, dataDict, globalYaml, varYaml):
     """
     :param ofname: this is the name of the ncfile you are building
     :param dataDict: keys must include...
