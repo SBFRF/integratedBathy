@@ -104,8 +104,8 @@ dxi = 1  # fining of the grid for spline (e.g., 0.1 means return spline on a gri
 # as with dxm, can be a tuple if you want seperate values for dxi and dyi
 targetvar = 0.8 # this is the target variance used in the spline function.
 # It is used in conjunction with the MSE from splineCinterp to compute the spline weights (wb)
-dSTR_s = '2016-04-01T00:00:00Z'
-dSTR_e = '2016-06-01T00:00:00Z'
+dSTR_s = '2008-01-01T00:00:00Z'
+dSTR_e = '2017-07-01T00:00:00Z'
 
 # dir_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles_gridded'
 dir_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles'

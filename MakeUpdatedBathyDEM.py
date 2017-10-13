@@ -369,7 +369,7 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     xFRFn_vec = out['x_out']
                     yFRFn_vec = out['y_out']
 
-
+                    """
                     # Fig 4 in the TN?
                     # what does the new grid look like.
                     fig_name = 'newSurveyGrid_' + str(surveys[tt]) + '.png'
@@ -390,6 +390,7 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     plt.tight_layout()
                     plt.savefig(os.path.join(temp_fig_loc, fig_name))
                     plt.close()
+                    """
 
 
                     # make my the mesh for the new subgrid
@@ -417,6 +418,7 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     newZn = Zi_s + newZdiff2
 
 
+                    """
                     # Fig 5 in the TN?
                     # sample cross sections!!!!!!
 
@@ -484,11 +486,12 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     fig.tight_layout(pad=1, h_pad=2.5, w_pad=1, rect=[0.0, 0.0, 1.0, 0.925])
                     fig.savefig(os.path.join(temp_fig_loc, fig_name), dpi=300)
                     plt.close()
-
+                    """
 
                     # get my new pretty splined grid
                     newZi = Zi.copy()
                     newZi[y1:y2 + 1, x1:x2 + 1] = newZn
+
 
 
 
