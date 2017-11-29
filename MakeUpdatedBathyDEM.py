@@ -316,11 +316,52 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                 gridDict['yFRFi_vec'] = yFRFi_vec
 
                 # temp = subgridBounds(surveyDict, gridDict, maxSpace=249)
-                temp = subgridBounds2(surveyDict, gridDict, maxSpace=249)
+                maxSpace = 249
+                surveyFilter = True
+                temp = subgridBounds2(surveyDict, gridDict, maxSpace=maxSpace, surveyFilter=surveyFilter)
+
                 x0 = temp['x0']
                 x1 = temp['x1']
                 y0 = temp['y0']
                 y1 = temp['y1']
+
+                if surveyFilter is True:
+                    xS0 = temp['xS0']
+                    xS1 = temp['xS1']
+                    yS0 = temp['yS0']
+                    yS1 = temp['yS1']
+                    # throw out all points in the survey that are outside of these bounds!!!!
+                    test1 = np.where(dataX <= xS0, 1, 0)
+                    test2 = np.where(dataX >= xS1, 1, 0)
+                    test3 = np.where(dataY <= yS0, 1, 0)
+                    test4 = np.where(dataY >= yS1, 1, 0)
+                    test_sum = test1 + test2 + test3 + test4
+                    dataXn = dataX[test_sum >= 4]
+                    dataYn = dataY[test_sum >= 4]
+                    dataZn = dataZ[test_sum >= 4]
+                    del dataX
+                    del dataY
+                    del dataZ
+                    dataX = dataXn
+                    dataY = dataYn
+                    dataZ = dataZn
+                    del dataXn
+                    del dataYn
+                    del dataZn
+                else:
+                    pass
+
+
+                """
+                # what if instead of using subgrid bounds I let it go over the whole thing?
+                # NO NO NO NO!!! This looks terrible!!!!
+                # I get that same stripy stuff we had with too large a spacing!!!!!
+                x0 = max(xFRFi_vec)
+                x1 = min(xFRFi_vec)
+                y0 = max(yFRFi_vec)
+                y1 = min(yFRFi_vec)
+                """
+
                 max_spacing = temp['max_spacing']
 
                 del temp
@@ -333,7 +374,9 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
 
                     # if the max spacing is too high, bump up the smoothing!!
                     y_smooth_u = y_smooth  # reset y_smooth if I changed it during last step
-                    if 2 * max_spacing > y_smooth:
+                    if max_spacing is None:
+                        pass
+                    elif 2 * max_spacing > y_smooth:
                         y_smooth_u = int(dy * round(float(2 * max_spacing) / dy))
                     else:
                         pass
@@ -350,7 +393,8 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                             'msmoothy': y_smooth_u,  # smoothing length scale in y
                             'msmootht': 1,  # smoothing length scale in Time
                             'filterName': 'hanning',
-                            'nmseitol': 0.75,
+                            # 'nmseitol': 0.75, # why did Spicer use 0.75?  Meg uses 0.25
+                            'nmseitol': 0.25,
                             'grid_coord_check': 'FRF',
                             'grid_filename': '',  # should be none if creating background Grid!  becomes best guess grid
                             'data_coord_check': 'FRF',
@@ -368,6 +412,29 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     NMSEn = out['NMSEi']
                     xFRFn_vec = out['x_out']
                     yFRFn_vec = out['y_out']
+
+                    # plot the MSEn?
+                    # what does the new grid look like.
+                    fig_name = 'newSurveyMSE_' + str(surveys[tt]) + '.png'
+                    temp_fig_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TechNote\Figures'
+                    plt.pcolor(xFRFn_vec, yFRFn_vec, MSEn, cmap=plt.cm.jet, vmin=-0, vmax=0.15)
+                    cbar = plt.colorbar()
+                    cbar.set_label('MSE', fontsize=16)
+                    plt.scatter(dataX, dataY, marker='o', c='k', s=1, alpha=0.25, label='Transects')
+                    plt.xlabel('Cross-shore - $x$ ($m$)', fontsize=16)
+                    plt.ylabel('Alongshore - $y$ ($m$)', fontsize=16)
+                    plt.legend(prop={'size': 14})
+                    plt.tick_params(axis='both', which='major', labelsize=12)
+                    plt.tick_params(axis='both', which='minor', labelsize=10)
+                    ax1 = plt.gca()
+                    ax1.spines['right'].set_visible(False)
+                    ax1.spines['top'].set_visible(False)
+                    plt.axis('tight')
+                    plt.tight_layout()
+                    plt.savefig(os.path.join(temp_fig_loc, fig_name))
+                    plt.close()
+                    t = 1
+
 
                     """
                     # Fig 4 in the TN?
@@ -407,18 +474,56 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     Zdiff = Zn - Zi_s
 
                     # spline time?
+                    MSEn = np.power(MSEn, 2)
                     wb = 1 - np.divide(MSEn, targetvar + MSEn)
 
+                    # plot the MSEn?
+                    # what does the new grid look like.
+                    fig_name = 'newSurveyWEIGHTS_' + str(surveys[tt]) + '.png'
+                    temp_fig_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TechNote\Figures'
+                    plt.pcolor(xFRFn_vec, yFRFn_vec, wb, cmap=plt.cm.jet, vmin=-0, vmax=1)
+                    cbar = plt.colorbar()
+                    cbar.set_label('wb', fontsize=16)
+                    plt.scatter(dataX, dataY, marker='o', c='k', s=1, alpha=0.25, label='Transects')
+                    plt.xlabel('Cross-shore - $x$ ($m$)', fontsize=16)
+                    plt.ylabel('Alongshore - $y$ ($m$)', fontsize=16)
+                    plt.legend(prop={'size': 14})
+                    plt.tick_params(axis='both', which='major', labelsize=12)
+                    plt.tick_params(axis='both', which='minor', labelsize=10)
+                    ax1 = plt.gca()
+                    ax1.spines['right'].set_visible(False)
+                    ax1.spines['top'].set_visible(False)
+                    plt.axis('tight')
+                    plt.tight_layout()
+                    plt.savefig(os.path.join(temp_fig_loc, fig_name))
+                    plt.close()
+                    t = 1
 
-                    newZdiff = DLY_bspline(Zdiff, splinebctype=splinebctype, off=off, lc=None)
-                    newZdiff2 = bspline_pertgrid(newZdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
-                    # newZdiff2 = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
+                    """
+                    # throw out all points in the survey that are outside of these bounds!!!!
+                    test1 = np.where(xFRFn <= xS0, 1, 0)
+                    test2 = np.where(xFRFn >= xS1, 1, 0)
+                    test3 = np.where(yFRFn <= yS0, 1, 0)
+                    test4 = np.where(yFRFn >= yS1, 1, 0)
+                    test_sum = test1 + test2 + test3 + test4
+                    wbn = wb.copy()
+                    wbn[test_sum != 4] = 0
+                    del wb
+                    wb = wbn.copy()
+                    del wbn
+                    """
+
+
+
+                    # newZdiff = DLY_bspline(Zdiff, splinebctype=splinebctype, off=off, lc=None)
+                    # newZdiff2 = bspline_pertgrid(newZdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
+                    newZdiff2 = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
 
 
                     newZn = Zi_s + newZdiff2
 
 
-                    """
+
                     # Fig 5 in the TN?
                     # sample cross sections!!!!!!
 
@@ -441,6 +546,11 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     ax1.plot(yFRFn[:, x_check1], Zn[:, x_check1], 'r', label='Original')
                     ax1.plot(yFRFn[:, x_check1], newZn[:, x_check1], 'b', label='Splined')
                     ax1.plot(yFRFn[:, x_check1], Zi_s[:, x_check1], 'k--', label='Background')
+                    ax4 = ax1.twinx()
+                    ax4.plot(yFRFn[:, x_check1], wb[:, x_check1], 'g--', label='Weights')
+                    ax4.tick_params('y', colors='g')
+                    ax4.set_ylabel('Weights', fontsize=16)
+                    ax4.yaxis.label.set_color('green')
                     ax1.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
                     ax1.set_ylabel('Elevation ($m$)', fontsize=16)
                     ax1.set_title('$X=%s$' %(str(x_loc_check1)), fontsize=16)
@@ -456,6 +566,11 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     ax2.plot(yFRFn[:, x_check2], Zn[:, x_check2], 'r', label='Original')
                     ax2.plot(yFRFn[:, x_check2], newZn[:, x_check2], 'b', label='Splined')
                     ax2.plot(yFRFn[:, x_check2], Zi_s[:, x_check2], 'k--', label='Background')
+                    ax5 = ax2.twinx()
+                    ax5.plot(yFRFn[:, x_check2], wb[:, x_check2], 'g--', label='Weights')
+                    ax5.tick_params('y', colors='g')
+                    ax5.set_ylabel('Weights', fontsize=16)
+                    ax5.yaxis.label.set_color('green')
                     ax2.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
                     ax2.set_ylabel('Elevation ($m$)', fontsize=16)
                     ax2.set_title('$X=%s$' % (str(x_loc_check2)), fontsize=16)
@@ -471,6 +586,11 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     ax3.plot(yFRFn[:, x_check3], Zn[:, x_check3], 'r', label='Original')
                     ax3.plot(yFRFn[:, x_check3], newZn[:, x_check3], 'b', label='Splined')
                     ax3.plot(yFRFn[:, x_check3], Zi_s[:, x_check3], 'k--', label='Background')
+                    ax6 = ax3.twinx()
+                    ax6.plot(yFRFn[:, x_check3], wb[:, x_check3], 'g--', label='Weights')
+                    ax6.set_ylabel('Weights', fontsize=16)
+                    ax6.tick_params('y', colors='g')
+                    ax6.yaxis.label.set_color('green')
                     ax3.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
                     ax3.set_ylabel('Elevation ($m$)', fontsize=16)
                     ax3.set_title('$X=%s$' % (str(x_loc_check3)), fontsize=16)
@@ -486,7 +606,7 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     fig.tight_layout(pad=1, h_pad=2.5, w_pad=1, rect=[0.0, 0.0, 1.0, 0.925])
                     fig.savefig(os.path.join(temp_fig_loc, fig_name), dpi=300)
                     plt.close()
-                    """
+
 
                     # get my new pretty splined grid
                     newZi = Zi.copy()
@@ -1349,7 +1469,7 @@ def getGridded(ncml_url, d1, d2):
     return out
 
 
-def subgridBounds2(surveyDict, gridDict, xMax=1290, maxSpace=149):
+def subgridBounds2(surveyDict, gridDict, xMax=1290, maxSpace=149, surveyFilter=False):
     """
     # this function determines the bounds of the subgrid we are going to generate from the trasect data
 
@@ -1399,13 +1519,13 @@ def subgridBounds2(surveyDict, gridDict, xMax=1290, maxSpace=149):
         Yprof = dataY[np.where(profNum == profNum_list[ss])]
         prof_meanY[ss] = np.mean(Yprof)
 
-    #stick this in pandas df
+    # stick this in pandas df
     columns = ['profNum']
     df = pd.DataFrame(profNum_list, columns=columns)
     df['prof_meanY'] = prof_meanY
     # sort them by mean Y
     df.sort_values(['prof_meanY'], ascending=1, inplace=True)
-    #reindex
+    # reindex
     df.reset_index(drop=True, inplace=True)
 
     # figure out the differences!!!!!
@@ -1539,6 +1659,74 @@ def subgridBounds2(surveyDict, gridDict, xMax=1290, maxSpace=149):
         # currently using the median of the min and max X extends of each profile,
         # and just the min and max of the y-extents of all the profiles.
 
+
+        # round them again because somehow this is giving us non-whole numbers
+        # round it to nearest dx or dy
+        # minX
+        if x1 >= 0:
+            x1 = x1 - (x1 % dx)
+        else:
+            x1 = x1 - (x1 % dx) + dx
+
+        # maxX
+        if x0 >= 0:
+            x0 = x0 - (x0 % dx)
+        else:
+            x0 = x0 - (x0 % dx) + dx
+
+        # minY
+        if y0 >= 0:
+            y0 = y0 - (y0 % dy)
+        else:
+            y0 = y0 - (y0 % dy) + dy
+
+        # maxY
+        if y1 >= 0:
+            y1 = y1 - (y1 % dy)
+        else:
+            y1 = y1 - (y1 % dy) + dy
+
+        if surveyFilter is True:
+            # what do I want my survey stuff to be?
+            xS0 = x0.copy()
+            xS1 = x1.copy()
+            yS0 = y0.copy()
+            yS1 = y1.copy()
+
+            # do I want to come in some here?  i..e, throw out points that are close to the edge?
+            xS0 = xS0 - 20 * dx
+            xS1 = xS1 + 20 * dx
+            yS0 = yS0 - 20 * dy
+            yS1 = yS1 + 20 * dy
+            # also artificially push my bounds out a little bit...
+            x0 = x0 + 20 * dx
+            x1 = x1 - 20 * dx
+            y0 = y0 + 20 * dy
+            y1 = y1 - 20 * dy
+
+
+        else:
+            pass
+
+        """
+        # go ahead and move in some buffer spacing?
+        base = 50
+        buffer = int(base * round(float(2*maxSpace) / base))
+        x0 = x0 + buffer
+        x1 = x1 - buffer
+        y0 = y0 + buffer
+        y1 = y1 - buffer
+        """
+
+
+        """
+        # go IN one node?
+        x0 = x0 - dx
+        x1 = x1 + dx
+        y0 = y0 - dy
+        y1 = y1 + dy
+        """
+
         # check to see if this is past the bounds of your background DEM.
         # if so, truncate so that it does not exceed.
         if x0 > max(xFRFi_vec):
@@ -1565,7 +1753,40 @@ def subgridBounds2(surveyDict, gridDict, xMax=1290, maxSpace=149):
         out['y1'] = y1
         out['max_spacing'] = max_spacing
 
+        if surveyFilter is True:
+            # check to see if this is past the bounds of your background DEM.
+            # if so, truncate so that it does not exceed.
+            if xS0 > max(xFRFi_vec):
+                xS0 = xMax - dx
+            else:
+                pass
+            if xS1 < min(xFRFi_vec):
+                xS1 = min(xFRFi_vec) + dx
+            else:
+                pass
+            if yS0 > max(yFRFi_vec):
+                yS0 = max(yFRFi_vec) - dy
+            else:
+                pass
+            if yS1 < min(yFRFi_vec):
+                yS1 = min(yFRFi_vec) + dy
+            else:
+                pass
+
+            out['xS0'] = xS0
+            out['xS1'] = xS1
+            out['yS0'] = yS0
+            out['yS1'] = yS1
+        else:
+            pass
+
+
+
     return out
+
+
+
+
 
 
 

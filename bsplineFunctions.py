@@ -536,8 +536,8 @@ def bspline_curve(y, ym, am, dx, bctype, aci=None):
 
 
 def DLY_bspline(Zi, splinebctype=10, off=None, lc=None):
-    """
 
+    """
     :param Zi: elevation DIFFERENCE between the new survey data and the background (it splines back to 0..)
     :param splinebctype: type of edge spline you want it to do, currently supports
                         10 - 0 slope at edge and at offset node, 0 value at edge

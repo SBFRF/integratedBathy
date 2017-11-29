@@ -101,11 +101,11 @@ lc = 4  # spline smoothing constraint value
 dxm = 2  # coarsening of the grid for spline (e.g., 2 means calculate with a dx that is 2x input dx)
 # can be tuple if you want to do dx and dy seperately (dxm, dym), otherwise dxm is used for both
 dxi = 1  # fining of the grid for spline (e.g., 0.1 means return spline on a grid that is 10x input dx)
-# as with dxm, can be a tuple if you want seperate values for dxi and dyi
+# as with dxm, can be a tuple if you want separate values for dxi and dyi
 targetvar = 0.8 # this is the target variance used in the spline function.
 # It is used in conjunction with the MSE from splineCinterp to compute the spline weights (wb)
-dSTR_s = '2008-01-01T00:00:00Z'
-dSTR_e = '2017-07-01T00:00:00Z'
+dSTR_s = '2012-01-01T00:00:00Z'
+dSTR_e = '2012-03-01T00:00:00Z'
 
 # dir_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles_gridded'
 dir_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles'
@@ -135,6 +135,8 @@ mBATHY.makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=scalecDict
 
 
 t = 1
+
+
 """
 # make plots for spike
 nc_b_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles'
@@ -174,7 +176,7 @@ plt.close()
 """
 
 # force the survey to start at the first of the month and end at the last of the month!!!!
-dSTR_s = dSTR_s[0:7] + '-01T00:00:00Z'
+# dSTR_s = dSTR_s[0:7] + '-01T00:00:00Z'
 
 
 
@@ -409,15 +411,15 @@ plt.close()
 
 
 
-"""
+
 # ok, what we are going to do here is make a .csv file out of the .nc file of the transect
 # that Meg used in the practice code she gave us....
 
-floc = 'C:\Users\RDCHLDLY\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\MegsPracticeFiles'
-fname = 'FRF_20160726_1121_FRF_NAVD88_LARC_GPS_UTC_v20170320.csv'
+floc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\MegsPracticeFiles'
+fname = 'FRF_20120214_1069_FRF_NAVD88_LARC_GPS_UTC_v20160402.csv'
 
-d_s = DT.datetime.strptime('2016-07-27T12:00:00Z', '%Y-%m-%dT%H:%M:%SZ')
-d_e = DT.datetime.strptime('2016-07-28T12:00:00Z', '%Y-%m-%dT%H:%M:%SZ')
+d_s = DT.datetime.strptime('2012-02-17T12:00:00Z', '%Y-%m-%dT%H:%M:%SZ')
+d_e = DT.datetime.strptime('2012-02-18T12:00:00Z', '%Y-%m-%dT%H:%M:%SZ')
 frf_Data = getObs(d_s, d_e)
 bathy_data = frf_Data.getBathyTransectFromNC()
 
@@ -439,7 +441,10 @@ df['yFRF'] = yFRF
 df['bottomElevation'] = elev
 
 df.to_csv(os.path.join(floc, fname), index=False)
-"""
+
+t = 1
+
+
 
 """
 # this is just to test the makeBackgroundBathy script I wrote
