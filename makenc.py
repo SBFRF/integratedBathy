@@ -748,6 +748,7 @@ def makenc_tiBATHY(ofname, dataDict, globalYaml, varYaml):
 
         surveyNumber - this is a 1D array of length ns (number of surveys in the month)
         surveyTime - this is a 1D array of length ns
+        y_smooth = this is a 1D array of length ns (the cross-shore smoothing scale used)
 
     :param globalYaml:
     :param varYaml:

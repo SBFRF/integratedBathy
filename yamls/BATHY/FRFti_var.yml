@@ -1,6 +1,6 @@
 # stuff
 
-_variables: ['elevation', 'latitude', 'longitude', 'xFRF', 'yFRF', 'surveyNumber', 'time']
+_variables: ['elevation', 'latitude', 'longitude', 'xFRF', 'yFRF', 'surveyNumber', 'y_smooth', 'time']
 _attributes: ['notes']
 _dimensions: ['time', 'yFRF', 'xFRF']
 
@@ -109,3 +109,15 @@ surveyNumber:
     short_name: 'surveyNum'
     coordinates: ''
     description: 'The number of the most recent survey incorporated into the bathymetry at this index'
+
+y_smooth:
+    name: 'y_smooth'
+    units: ''
+    standard_name: ''
+    long_name: 'Alongshore smoothing scale used for the new survey data'
+    data_type: 'f8'
+    dim: ['time']
+    fill_value: '-999.99'
+    short_name: 'ySmooth'
+    coordinates: ''
+    description: 'The alongshore smoothing scale used for the new survey data that is integrated into the background'

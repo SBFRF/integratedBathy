@@ -7,9 +7,10 @@ import makenc
 from matplotlib import pyplot as plt
 from bsplineFunctions import bspline_pertgrid, DLY_bspline
 import datetime as DT
-from scalecInterp_python.DEM_generator import DEM_generator
+from scalecInterp_python.DEM_generator import DEM_generator, makeWBflow2D
 import pandas as pd
 from getdatatestbed import getDataFRF
+from scipy.interpolate import griddata
 
 
 
@@ -78,9 +79,10 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
     # nc_url = 'http://134.164.129.62:8080/thredds/dodsC/CMTB/grids/UpdatedBackgroundDEM/UpdatedBackgroundDEM.ncml'
     # this is just the location of the ncml for the already created UpdatedDEM
 
-    nc_b_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles_WA'
-    nc_b_name = 'backgroundDEMt0_TimeMean.nc'
     # these together are the location of the standard background bathymetry that we started from.
+    nc_b_url = 'http://134.164.129.55/thredds/dodsC/cmtb/grids/TimeMeanBackgroundDEM/backgroundDEMt0_TimeMean.nc'
+
+    # pull the background from the THREDDS
 
     # Yaml files for my .nc files!!!!!
     global_yaml = 'C:\Users\dyoung8\PycharmProjects\makebathyinterp\yamls\BATHY\FRFti_global.yml'
@@ -106,14 +108,16 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
         dxm = 2
         dxi = 1
         targetvar = 0.45
-        off = 10
+        wbysmooth = 300
+        wbxsmooth = 100
     else:
         splinebctype = splineDict['splinebctype']
         lc = splineDict['lc']
         dxm = splineDict['dxm']
         dxi = splineDict['dxi']
         targetvar = splineDict['targetvar']
-        off = splineDict['off']
+        wbysmooth = splineDict['wbysmooth']
+        wbxsmooth = splineDict['wbxsmooth']
 
 
     # force the survey to start at the first of the month and end at the last of the month!!!!
@@ -244,10 +248,12 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
 
                 except:
                     # load the background bathy from netDCF file if you can't get the ncml
-                    old_bathy = nc.Dataset(os.path.join(nc_b_loc, nc_b_name))
+                    # old_bathy = nc.Dataset(os.path.join(nc_b_loc, nc_b_name))
+                    old_bathy = nc.Dataset(nc_b_url)
                     Zi = old_bathy.variables['elevation'][:]
                     xFRFi_vec = old_bathy.variables['xFRF'][:]
                     yFRFi_vec = old_bathy.variables['yFRF'][:]
+
 
 
             # read out the dx and dy of the background grid!!!
@@ -260,15 +266,13 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
 
             # pre-allocate my netCDF dictionary variables here....
             elevation = np.zeros((len(surveys), rows, cols))
-            xFRF = np.zeros(cols)
-            yFRF = np.zeros(rows)
-            latitude = np.zeros((rows, cols))
-            longitude = np.zeros((rows, cols))
             surveyNumber = np.zeros(len(surveys))
             surveyTime = np.zeros(len(surveys))
+            smoothAL = np.zeros(len(surveys))
 
             # ok, now that I have the list of the surveys I am going to keep.....
             for tt in range(0, len(surveys)):
+
                 """
                 # plot the initial bathymetry...
                 fig_name = 'backgroundDEM_' + str(surveys[tt]) + '_orig' + '.png'
@@ -351,17 +355,6 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                 else:
                     pass
 
-
-                """
-                # what if instead of using subgrid bounds I let it go over the whole thing?
-                # NO NO NO NO!!! This looks terrible!!!!
-                # I get that same stripy stuff we had with too large a spacing!!!!!
-                x0 = max(xFRFi_vec)
-                x1 = min(xFRFi_vec)
-                y0 = max(yFRFi_vec)
-                y1 = min(yFRFi_vec)
-                """
-
                 max_spacing = temp['max_spacing']
 
                 del temp
@@ -380,6 +373,7 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                         y_smooth_u = int(dy * round(float(2 * max_spacing) / dy))
                     else:
                         pass
+
 
                     print np.unique(survNum)
                     dict = {'x0': x0,  # gp.FRFcoord(x0, y0)['Lon'],  # -75.47218285,
@@ -401,6 +395,9 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                             'xFRF_s': dataX,
                             'yFRF_s': dataY,
                             'Z_s': dataZ,
+                            'xFRFi_vec': xFRFi_vec,  # x-positions from the full background bathy
+                            'yFRFi_vec': yFRFi_vec,  # y-positions from the full background bathy
+                            'Zi': Zi,  # full background bathymetry elevations
                             }
 
                     out = DEM_generator(dict)
@@ -413,27 +410,32 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     xFRFn_vec = out['x_out']
                     yFRFn_vec = out['y_out']
 
-                    # plot the MSEn?
-                    # what does the new grid look like.
-                    fig_name = 'newSurveyMSE_' + str(surveys[tt]) + '.png'
-                    temp_fig_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TechNote\Figures'
-                    plt.pcolor(xFRFn_vec, yFRFn_vec, MSEn, cmap=plt.cm.jet, vmin=-0, vmax=0.15)
+                    # make my the mesh for the new subgrid
+                    xFRFn, yFRFn = np.meshgrid(xFRFn_vec, yFRFn_vec)
+
+
+                    """
+                    # try a standard interpolation here and see if it gives me the same thing?
+                    xFRFn2 = xFRFn.reshape((1, xFRFn.shape[0] * xFRFn.shape[1]))[0]
+                    yFRFn2 = yFRFn.reshape((1, yFRFn.shape[0] * yFRFn.shape[1]))[0]
+                    vecZ2 = griddata((dataX, dataY), dataZ, (xFRFn2, yFRFn2))
+                    gridZ2 = vecZ2.reshape((xFRFn.shape[0], xFRFn.shape[1]))
+
+                    # location of these figures
+                    temp_fig_loc = fig_loc
+                
+                    # plot the Zn from stamdard gridata to compare with my DEM_generator output
+                    fig_name = 'griddataDEM_' + str(surveys[tt]) + '.png'
+                    plt.pcolor(xFRFn, yFRFn, gridZ2, cmap=plt.cm.jet, vmin=-13, vmax=5)
                     cbar = plt.colorbar()
-                    cbar.set_label('MSE', fontsize=16)
+                    cbar.set_label('(m)')
                     plt.scatter(dataX, dataY, marker='o', c='k', s=1, alpha=0.25, label='Transects')
-                    plt.xlabel('Cross-shore - $x$ ($m$)', fontsize=16)
-                    plt.ylabel('Alongshore - $y$ ($m$)', fontsize=16)
-                    plt.legend(prop={'size': 14})
-                    plt.tick_params(axis='both', which='major', labelsize=12)
-                    plt.tick_params(axis='both', which='minor', labelsize=10)
-                    ax1 = plt.gca()
-                    ax1.spines['right'].set_visible(False)
-                    ax1.spines['top'].set_visible(False)
-                    plt.axis('tight')
-                    plt.tight_layout()
+                    plt.xlabel('xFRF (m)')
+                    plt.ylabel('yFRF (m)')
+                    plt.legend()
                     plt.savefig(os.path.join(temp_fig_loc, fig_name))
                     plt.close()
-                    t = 1
+                    """
 
 
                     """
@@ -459,10 +461,6 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     plt.close()
                     """
 
-
-                    # make my the mesh for the new subgrid
-                    xFRFn, yFRFn = np.meshgrid(xFRFn_vec, yFRFn_vec)
-
                     x1 = np.where(xFRFi_vec == min(xFRFn_vec))[0][0]
                     x2 = np.where(xFRFi_vec == max(xFRFn_vec))[0][0]
                     y1 = np.where(yFRFi_vec == min(yFRFn_vec))[0][0]
@@ -477,52 +475,17 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     MSEn = np.power(MSEn, 2)
                     wb = 1 - np.divide(MSEn, targetvar + MSEn)
 
-                    # plot the MSEn?
-                    # what does the new grid look like.
-                    fig_name = 'newSurveyWEIGHTS_' + str(surveys[tt]) + '.png'
-                    temp_fig_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TechNote\Figures'
-                    plt.pcolor(xFRFn_vec, yFRFn_vec, wb, cmap=plt.cm.jet, vmin=-0, vmax=1)
-                    cbar = plt.colorbar()
-                    cbar.set_label('wb', fontsize=16)
-                    plt.scatter(dataX, dataY, marker='o', c='k', s=1, alpha=0.25, label='Transects')
-                    plt.xlabel('Cross-shore - $x$ ($m$)', fontsize=16)
-                    plt.ylabel('Alongshore - $y$ ($m$)', fontsize=16)
-                    plt.legend(prop={'size': 14})
-                    plt.tick_params(axis='both', which='major', labelsize=12)
-                    plt.tick_params(axis='both', which='minor', labelsize=10)
-                    ax1 = plt.gca()
-                    ax1.spines['right'].set_visible(False)
-                    ax1.spines['top'].set_visible(False)
-                    plt.axis('tight')
-                    plt.tight_layout()
-                    plt.savefig(os.path.join(temp_fig_loc, fig_name))
-                    plt.close()
-                    t = 1
+                    wb_dict = {'x_grid': xFRFn,
+                               'y_grid': yFRFn,
+                               'ax': wbxsmooth / float(max(xFRFn_vec)),
+                               'ay': wbysmooth / float(max(yFRFn_vec)),
+                               }
 
-                    """
-                    # throw out all points in the survey that are outside of these bounds!!!!
-                    test1 = np.where(xFRFn <= xS0, 1, 0)
-                    test2 = np.where(xFRFn >= xS1, 1, 0)
-                    test3 = np.where(yFRFn <= yS0, 1, 0)
-                    test4 = np.where(yFRFn >= yS1, 1, 0)
-                    test_sum = test1 + test2 + test3 + test4
-                    wbn = wb.copy()
-                    wbn[test_sum != 4] = 0
-                    del wb
-                    wb = wbn.copy()
-                    del wbn
-                    """
+                    wb_spline = makeWBflow2D(wb_dict)
+                    wb = np.multiply(wb, wb_spline)
 
-
-
-                    # newZdiff = DLY_bspline(Zdiff, splinebctype=splinebctype, off=off, lc=None)
-                    # newZdiff2 = bspline_pertgrid(newZdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
-                    newZdiff2 = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
-
-
-                    newZn = Zi_s + newZdiff2
-
-
+                    newZdiff = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
+                    newZn = Zi_s + newZdiff
 
                     # Fig 5 in the TN?
                     # sample cross sections!!!!!!
@@ -530,90 +493,186 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     # location of these figures
                     temp_fig_loc = fig_loc
 
-                    x_loc_check1 = int(100)
-                    x_loc_check2 = int(200)
-                    x_loc_check3 = int(350)
-                    x_check1 = np.where(xFRFn_vec == x_loc_check1)[0][0]
-                    x_check2 = np.where(xFRFn_vec == x_loc_check2)[0][0]
-                    x_check3 = np.where(xFRFn_vec == x_loc_check3)[0][0]
+                    try:
+                        x_loc_check1 = int(100)
+                        x_loc_check2 = int(200)
+                        x_loc_check3 = int(350)
+                        x_check1 = np.where(xFRFn_vec == x_loc_check1)[0][0]
+                        x_check2 = np.where(xFRFn_vec == x_loc_check2)[0][0]
+                        x_check3 = np.where(xFRFn_vec == x_loc_check3)[0][0]
 
 
-                    # plot X and Y transects from newZdiff to see if it looks correct?
-                    fig_name = 'backgroundDEM_' + yrs_dir + '-' + months[jj] + '-' + str(surveys[tt]) + '_Ytrans_X' + str(x_loc_check1) + '_X' + str(x_loc_check2) + '_X' + str(x_loc_check3) + '.png'
+                        # plot X and Y transects from newZdiff to see if it looks correct?
+                        fig_name = 'backgroundDEM_' + yrs_dir + '-' + months[jj] + '-' + str(surveys[tt]) + '_Ytrans_X' + str(x_loc_check1) + '_X' + str(x_loc_check2) + '_X' + str(x_loc_check3) + '.png'
 
-                    fig = plt.figure(figsize=(8, 9))
-                    ax1 = plt.subplot2grid((3, 1), (0, 0), colspan=1)
-                    ax1.plot(yFRFn[:, x_check1], Zn[:, x_check1], 'r', label='Original')
-                    ax1.plot(yFRFn[:, x_check1], newZn[:, x_check1], 'b', label='Splined')
-                    ax1.plot(yFRFn[:, x_check1], Zi_s[:, x_check1], 'k--', label='Background')
-                    ax4 = ax1.twinx()
-                    ax4.plot(yFRFn[:, x_check1], wb[:, x_check1], 'g--', label='Weights')
-                    ax4.tick_params('y', colors='g')
-                    ax4.set_ylabel('Weights', fontsize=16)
-                    ax4.yaxis.label.set_color('green')
-                    ax1.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
-                    ax1.set_ylabel('Elevation ($m$)', fontsize=16)
-                    ax1.set_title('$X=%s$' %(str(x_loc_check1)), fontsize=16)
-                    for tick in ax1.xaxis.get_major_ticks():
-                        tick.label.set_fontsize(14)
-                    for tick in ax1.yaxis.get_major_ticks():
-                        tick.label.set_fontsize(14)
-                    ax1.tick_params(labelsize=14)
-                    ax1.legend()
-                    ax1.text(0.10, 0.95, '(a)', horizontalalignment='left', verticalalignment='top', transform=ax1.transAxes, fontsize=16)
+                        fig = plt.figure(figsize=(8, 9))
+                        ax1 = plt.subplot2grid((3, 1), (0, 0), colspan=1)
+                        ax1.plot(yFRFn[:, x_check1], Zn[:, x_check1], 'r', label='Original')
+                        ax1.plot(yFRFn[:, x_check1], newZn[:, x_check1], 'b', label='Splined')
+                        ax1.plot(yFRFn[:, x_check1], Zi_s[:, x_check1], 'k--', label='Background')
+                        ax4 = ax1.twinx()
+                        ax4.plot(yFRFn[:, x_check1], wb[:, x_check1], 'g--', label='Weights')
+                        ax4.tick_params('y', colors='g')
+                        ax4.set_ylabel('Weights', fontsize=16)
+                        ax4.yaxis.label.set_color('green')
+                        ax1.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
+                        ax1.set_ylabel('Elevation ($m$)', fontsize=16)
+                        ax1.set_title('$X=%s$' %(str(x_loc_check1)), fontsize=16)
+                        for tick in ax1.xaxis.get_major_ticks():
+                            tick.label.set_fontsize(14)
+                        for tick in ax1.yaxis.get_major_ticks():
+                            tick.label.set_fontsize(14)
+                        ax1.tick_params(labelsize=14)
+                        ax1.legend()
+                        ax1.text(0.10, 0.95, '(a)', horizontalalignment='left', verticalalignment='top', transform=ax1.transAxes, fontsize=16)
 
-                    ax2 = plt.subplot2grid((3, 1), (1, 0), colspan=1)
-                    ax2.plot(yFRFn[:, x_check2], Zn[:, x_check2], 'r', label='Original')
-                    ax2.plot(yFRFn[:, x_check2], newZn[:, x_check2], 'b', label='Splined')
-                    ax2.plot(yFRFn[:, x_check2], Zi_s[:, x_check2], 'k--', label='Background')
-                    ax5 = ax2.twinx()
-                    ax5.plot(yFRFn[:, x_check2], wb[:, x_check2], 'g--', label='Weights')
-                    ax5.tick_params('y', colors='g')
-                    ax5.set_ylabel('Weights', fontsize=16)
-                    ax5.yaxis.label.set_color('green')
-                    ax2.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
-                    ax2.set_ylabel('Elevation ($m$)', fontsize=16)
-                    ax2.set_title('$X=%s$' % (str(x_loc_check2)), fontsize=16)
-                    for tick in ax2.xaxis.get_major_ticks():
-                        tick.label.set_fontsize(14)
-                    for tick in ax2.yaxis.get_major_ticks():
-                        tick.label.set_fontsize(14)
-                    ax2.tick_params(labelsize=14)
-                    ax2.legend()
-                    ax2.text(0.10, 0.95, '(b)', horizontalalignment='left', verticalalignment='top', transform=ax2.transAxes, fontsize=16)
+                        ax2 = plt.subplot2grid((3, 1), (1, 0), colspan=1)
+                        ax2.plot(yFRFn[:, x_check2], Zn[:, x_check2], 'r', label='Original')
+                        ax2.plot(yFRFn[:, x_check2], newZn[:, x_check2], 'b', label='Splined')
+                        ax2.plot(yFRFn[:, x_check2], Zi_s[:, x_check2], 'k--', label='Background')
+                        ax5 = ax2.twinx()
+                        ax5.plot(yFRFn[:, x_check2], wb[:, x_check2], 'g--', label='Weights')
+                        ax5.tick_params('y', colors='g')
+                        ax5.set_ylabel('Weights', fontsize=16)
+                        ax5.yaxis.label.set_color('green')
+                        ax2.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
+                        ax2.set_ylabel('Elevation ($m$)', fontsize=16)
+                        ax2.set_title('$X=%s$' % (str(x_loc_check2)), fontsize=16)
+                        for tick in ax2.xaxis.get_major_ticks():
+                            tick.label.set_fontsize(14)
+                        for tick in ax2.yaxis.get_major_ticks():
+                            tick.label.set_fontsize(14)
+                        ax2.tick_params(labelsize=14)
+                        ax2.legend()
+                        ax2.text(0.10, 0.95, '(b)', horizontalalignment='left', verticalalignment='top', transform=ax2.transAxes, fontsize=16)
 
-                    ax3 = plt.subplot2grid((3, 1), (2, 0), colspan=1)
-                    ax3.plot(yFRFn[:, x_check3], Zn[:, x_check3], 'r', label='Original')
-                    ax3.plot(yFRFn[:, x_check3], newZn[:, x_check3], 'b', label='Splined')
-                    ax3.plot(yFRFn[:, x_check3], Zi_s[:, x_check3], 'k--', label='Background')
-                    ax6 = ax3.twinx()
-                    ax6.plot(yFRFn[:, x_check3], wb[:, x_check3], 'g--', label='Weights')
-                    ax6.set_ylabel('Weights', fontsize=16)
-                    ax6.tick_params('y', colors='g')
-                    ax6.yaxis.label.set_color('green')
-                    ax3.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
-                    ax3.set_ylabel('Elevation ($m$)', fontsize=16)
-                    ax3.set_title('$X=%s$' % (str(x_loc_check3)), fontsize=16)
-                    for tick in ax3.xaxis.get_major_ticks():
-                        tick.label.set_fontsize(14)
-                    for tick in ax3.yaxis.get_major_ticks():
-                        tick.label.set_fontsize(14)
-                    ax3.tick_params(labelsize=14)
-                    ax3.legend()
-                    ax3.text(0.10, 0.95, '(c)', horizontalalignment='left', verticalalignment='top', transform=ax3.transAxes, fontsize=16)
+                        ax3 = plt.subplot2grid((3, 1), (2, 0), colspan=1)
+                        ax3.plot(yFRFn[:, x_check3], Zn[:, x_check3], 'r', label='Original')
+                        ax3.plot(yFRFn[:, x_check3], newZn[:, x_check3], 'b', label='Splined')
+                        ax3.plot(yFRFn[:, x_check3], Zi_s[:, x_check3], 'k--', label='Background')
+                        ax6 = ax3.twinx()
+                        ax6.plot(yFRFn[:, x_check3], wb[:, x_check3], 'g--', label='Weights')
+                        ax6.set_ylabel('Weights', fontsize=16)
+                        ax6.tick_params('y', colors='g')
+                        ax6.yaxis.label.set_color('green')
+                        ax3.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
+                        ax3.set_ylabel('Elevation ($m$)', fontsize=16)
+                        ax3.set_title('$X=%s$' % (str(x_loc_check3)), fontsize=16)
+                        for tick in ax3.xaxis.get_major_ticks():
+                            tick.label.set_fontsize(14)
+                        for tick in ax3.yaxis.get_major_ticks():
+                            tick.label.set_fontsize(14)
+                        ax3.tick_params(labelsize=14)
+                        ax3.legend()
+                        ax3.text(0.10, 0.95, '(c)', horizontalalignment='left', verticalalignment='top', transform=ax3.transAxes, fontsize=16)
 
-                    fig.subplots_adjust(wspace=0.4, hspace=0.1)
-                    fig.tight_layout(pad=1, h_pad=2.5, w_pad=1, rect=[0.0, 0.0, 1.0, 0.925])
-                    fig.savefig(os.path.join(temp_fig_loc, fig_name), dpi=300)
+                        fig.subplots_adjust(wspace=0.4, hspace=0.1)
+                        fig.tight_layout(pad=1, h_pad=2.5, w_pad=1, rect=[0.0, 0.0, 1.0, 0.925])
+                        fig.savefig(os.path.join(temp_fig_loc, fig_name), dpi=300)
+                        plt.close()
+                    except:
+                        pass
+
+                    try:
+                        y_loc_check1 = int(250)
+                        y_loc_check2 = int(500)
+                        y_loc_check3 = int(750)
+                        y_check1 = np.where(yFRFn_vec == y_loc_check1)[0][0]
+                        y_check2 = np.where(yFRFn_vec == y_loc_check2)[0][0]
+                        y_check3 = np.where(yFRFn_vec == y_loc_check3)[0][0]
+                        # plot a transect going in the cross-shore just to check it
+                        fig_name = 'backgroundDEM_' + yrs_dir + '-' + months[jj] + '-' + str(
+                            surveys[tt]) + '_Xtrans_Y' + str(y_loc_check1) + '_Y' + str(y_loc_check2) + '_Y' + str(
+                            y_loc_check3) + '.png'
+
+                        fig = plt.figure(figsize=(8, 9))
+                        ax1 = plt.subplot2grid((3, 1), (0, 0), colspan=1)
+                        ax1.plot(xFRFn[y_check1, :], Zn[y_check1, :], 'r', label='Original')
+                        ax1.plot(xFRFn[y_check1, :], newZn[y_check1, :], 'b', label='Splined')
+                        ax1.plot(xFRFn[y_check1, :], Zi_s[y_check1, :], 'k--', label='Background')
+                        ax4 = ax1.twinx()
+                        ax4.plot(xFRFn[y_check1, :], wb[y_check1, :], 'g--', label='Weights')
+                        ax4.tick_params('y', colors='g')
+                        ax4.set_ylabel('Weights', fontsize=16)
+                        ax4.yaxis.label.set_color('green')
+                        ax1.set_xlabel('Cross-shore - $x$ ($m$)', fontsize=16)
+                        ax1.set_ylabel('Elevation ($m$)', fontsize=16)
+                        ax1.set_title('$Y=%s$' % (str(y_loc_check1)), fontsize=16)
+                        for tick in ax1.xaxis.get_major_ticks():
+                            tick.label.set_fontsize(14)
+                        for tick in ax1.yaxis.get_major_ticks():
+                            tick.label.set_fontsize(14)
+                        ax1.tick_params(labelsize=14)
+                        ax1.legend()
+                        ax1.text(0.10, 0.95, '(a)', horizontalalignment='left', verticalalignment='top',
+                                 transform=ax1.transAxes, fontsize=16)
+
+                        ax2 = plt.subplot2grid((3, 1), (1, 0), colspan=1)
+                        ax2.plot(xFRFn[y_check2, :], Zn[y_check2, :], 'r', label='Original')
+                        ax2.plot(xFRFn[y_check2, :], newZn[y_check2, :], 'b', label='Splined')
+                        ax2.plot(xFRFn[y_check2, :], Zi_s[y_check2, :], 'k--', label='Background')
+                        ax5 = ax2.twinx()
+                        ax5.plot(xFRFn[y_check2, :], wb[y_check2, :], 'g--', label='Weights')
+                        ax5.tick_params('y', colors='g')
+                        ax5.set_ylabel('Weights', fontsize=16)
+                        ax5.yaxis.label.set_color('green')
+                        ax2.set_xlabel('Cross-shore - $x$ ($m$)', fontsize=16)
+                        ax2.set_ylabel('Elevation ($m$)', fontsize=16)
+                        ax2.set_title('$Y=%s$' % (str(y_loc_check2)), fontsize=16)
+                        for tick in ax2.xaxis.get_major_ticks():
+                            tick.label.set_fontsize(14)
+                        for tick in ax2.yaxis.get_major_ticks():
+                            tick.label.set_fontsize(14)
+                        ax2.tick_params(labelsize=14)
+                        ax2.legend()
+                        ax2.text(0.10, 0.95, '(b)', horizontalalignment='left', verticalalignment='top',
+                                 transform=ax2.transAxes, fontsize=16)
+
+                        ax3 = plt.subplot2grid((3, 1), (2, 0), colspan=1)
+                        ax3.plot(xFRFn[y_check3, :], Zn[y_check3, :], 'r', label='Original')
+                        ax3.plot(xFRFn[y_check3, :], newZn[y_check3, :], 'b', label='Splined')
+                        ax3.plot(xFRFn[y_check3, :], Zi_s[y_check3, :], 'k--', label='Background')
+                        ax6 = ax3.twinx()
+                        ax6.plot(xFRFn[y_check3, :], wb[y_check3, :], 'g--', label='Weights')
+                        ax6.set_ylabel('Weights', fontsize=16)
+                        ax6.tick_params('y', colors='g')
+                        ax6.yaxis.label.set_color('green')
+                        ax3.set_xlabel('Cross-shore - $x$ ($m$)', fontsize=16)
+                        ax3.set_ylabel('Elevation ($m$)', fontsize=16)
+                        ax3.set_title('$Y=%s$' % (str(y_loc_check3)), fontsize=16)
+                        for tick in ax3.xaxis.get_major_ticks():
+                            tick.label.set_fontsize(14)
+                        for tick in ax3.yaxis.get_major_ticks():
+                            tick.label.set_fontsize(14)
+                        ax3.tick_params(labelsize=14)
+                        ax3.legend()
+                        ax3.text(0.10, 0.95, '(c)', horizontalalignment='left', verticalalignment='top',
+                                 transform=ax3.transAxes, fontsize=16)
+
+                        fig.subplots_adjust(wspace=0.4, hspace=0.1)
+                        fig.tight_layout(pad=1, h_pad=2.5, w_pad=1, rect=[0.0, 0.0, 1.0, 0.925])
+                        fig.savefig(os.path.join(temp_fig_loc, fig_name), dpi=300)
+                        plt.close()
+                    except:
+                        pass
+
+                    # plot each newZn to see if it looks ok
+                    fig_name = 'newDEM_' + str(surveys[tt]) + '.png'
+                    plt.pcolor(xFRFn, yFRFn, newZn, cmap=plt.cm.jet, vmin=-13, vmax=5)
+                    cbar = plt.colorbar()
+                    cbar.set_label('(m)')
+                    plt.scatter(dataX, dataY, marker='o', c='k', s=1, alpha=0.25, label='Transects')
+                    plt.xlabel('xFRF (m)')
+                    plt.ylabel('yFRF (m)')
+                    plt.legend()
+                    plt.savefig(os.path.join(temp_fig_loc, fig_name))
                     plt.close()
+
 
 
                     # get my new pretty splined grid
                     newZi = Zi.copy()
                     newZi[y1:y2 + 1, x1:x2 + 1] = newZn
-
-
-
 
 
                     """
@@ -626,10 +685,9 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     plt.xlabel('xFRF (m)')
                     plt.ylabel('yFRF (m)')
                     plt.legend()
-                    plt.savefig(os.path.join(fig_loc, fig_name))
+                    plt.savefig(os.path.join(temp_fig_loc, fig_name))
                     plt.close()
                     """
-
 
                 # update Zi for next iteration
                 del Zi
@@ -639,6 +697,8 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                 surveyNumber[tt] = np.unique(survNum)[0]
                 timeunits = 'seconds since 1970-01-01 00:00:00'
                 surveyTime[tt] = nc.date2num(stimeM, timeunits)
+                smoothAL[tt] = y_smooth_u
+
                 # timeM is the mean time between the first and last time of the survey rounded to the nearest 12 hours
                 # this is going to be the date and time of the survey to the closest noon.
                 # remember it needs to be in seconds since 1970
@@ -679,6 +739,7 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
             # also want survey number and survey time....
             nc_dict['surveyNumber'] = surveyNumber
             nc_dict['time'] = surveyTime
+            nc_dict['y_smooth'] = smoothAL
 
             nc_name = 'FRF-updated_bathy_dem_transects_' + yrs_dir + months[jj] + '.nc'
 
@@ -1471,7 +1532,7 @@ def getGridded(ncml_url, d1, d2):
 
 def subgridBounds2(surveyDict, gridDict, xMax=1290, maxSpace=149, surveyFilter=False):
     """
-    # this function determines the bounds of the subgrid we are going to generate from the trasect data
+    # this function determines the bounds of the subgrid we are going to generate from the transect data
 
     # basic logic is that first we are only going to use the largest block of consecutive profile lines
     for which the mean yFRF position does not exceed maxSpace.  Then, of those that remain,
@@ -1693,16 +1754,21 @@ def subgridBounds2(surveyDict, gridDict, xMax=1290, maxSpace=149, surveyFilter=F
             yS0 = y0.copy()
             yS1 = y1.copy()
 
+            """
             # do I want to come in some here?  i..e, throw out points that are close to the edge?
             xS0 = xS0 - 20 * dx
             xS1 = xS1 + 20 * dx
             yS0 = yS0 - 20 * dy
             yS1 = yS1 + 20 * dy
+            """
+
+            """
             # also artificially push my bounds out a little bit...
             x0 = x0 + 20 * dx
             x1 = x1 - 20 * dx
             y0 = y0 + 20 * dy
             y1 = y1 - 20 * dy
+            """
 
 
         else:
@@ -1719,13 +1785,13 @@ def subgridBounds2(surveyDict, gridDict, xMax=1290, maxSpace=149, surveyFilter=F
         """
 
 
-        """
+
         # go IN one node?
         x0 = x0 - dx
         x1 = x1 + dx
         y0 = y0 - dy
         y1 = y1 + dy
-        """
+
 
         # check to see if this is past the bounds of your background DEM.
         # if so, truncate so that it does not exceed.
