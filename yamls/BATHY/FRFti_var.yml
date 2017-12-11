@@ -7,7 +7,7 @@ _dimensions: ['time', 'yFRF', 'xFRF']
 time:
     name: 'time'
     units: 'seconds since 1970-01-01 00:00:00'
-    standard_name: ''
+    standard_name: 'time'
     long_name: 'UTC Survey Date of the midpoint of the survey rounded to nearest 12 hrs'
     data_type: 'f8'
     dim: ['time']
@@ -17,7 +17,6 @@ time:
 yFRF:
     name: 'yFRF'
     units: 'm'
-    standard_name: ''
     long_name: 'along-shore position of each node - m'
     data_type: 'f8'
     dim: ['yFRF']
@@ -29,7 +28,6 @@ yFRF:
 xFRF:
     name: 'xFRF'
     units: 'm'
-    standard_name: ''
     long_name: 'cross-shore position of each node - m'
     data_type: 'f8'
     dim: ['xFRF']
@@ -41,19 +39,18 @@ xFRF:
 elevation:
     name: 'elevation'
     units: 'm'
-    standard_name: ''
     long_name: 'bed elevation for the bathymetry nodes'
     data_type: 'f8'
     dim: ['time', 'yFRF', 'xFRF']
     fill_value: '-9999.99'
     short_name: 'bathy'
-    coordinates: 'surveyNum yFRF xFRF'
+    coordinates: 'time yFRF xFRF'
     description: 'Bottom elevation for the bathymetry nodes after incorporating the numbered survey'
 
 latitude:
     name: 'latitude'
     units: 'Degrees'
-    standard_name: ''
+    standard_name: 'latitude'
     long_name: 'Latitude of each bathymetry node in decimal degrees'
     data_type: 'f8'
     dim: ['yFRF', 'xFRF']
@@ -65,7 +62,7 @@ latitude:
 longitude:
     name: 'longitude'
     units: 'Degrees'
-    standard_name: ''
+    standard_name: 'longitude'
     long_name: 'Longitude of each bathymetry node in decimal degrees'
     data_type: 'f8'
     dim: ['yFRF', 'xFRF']
@@ -77,7 +74,6 @@ longitude:
 easting:
     name: 'easting'
     units: 'm'
-    standard_name: ''
     long_name: 'easting of each bathymetry node in m'
     data_type: 'f8'
     dim: ['yFRF', 'xFRF']
@@ -89,7 +85,6 @@ easting:
 northing:
     name: 'northing'
     units: 'm'
-    standard_name: ''
     long_name: 'northing of each bathymetry node in m'
     data_type: 'f8'
     dim: ['yFRF', 'xFRF']
@@ -101,7 +96,6 @@ northing:
 surveyNumber:
     name: 'surveyNumber'
     units: ''
-    standard_name: ''
     long_name: 'The most recent survey incorporated into the bathymetry at this index'
     data_type: 'f8'
     dim: ['time']
@@ -112,8 +106,7 @@ surveyNumber:
 
 y_smooth:
     name: 'y_smooth'
-    units: ''
-    standard_name: ''
+    units: 'm'
     long_name: 'Alongshore smoothing scale used for the new survey data'
     data_type: 'f8'
     dim: ['time']

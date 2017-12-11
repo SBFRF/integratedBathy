@@ -741,7 +741,7 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
             nc_dict['time'] = surveyTime
             nc_dict['y_smooth'] = smoothAL
 
-            nc_name = 'FRF-updated_bathy_dem_transects_' + yrs_dir + months[jj] + '.nc'
+            nc_name = 'CMTB-integratedBathyProduct_survey_' + yrs_dir + months[jj] + '.nc'
 
             # save this location for next time through the loop
             prev_nc_name = nc_name
