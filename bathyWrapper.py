@@ -13,8 +13,8 @@ def bathyWrapper():
 
     # generic locations
     survey_ncml = 'http://134.164.129.55/thredds/dodsC/FRF/geomorphology/elevationTransects/survey/surveyTransects.ncml'
-    bathy_ncml = 'http://134.164.129.62:8080/thredds/dodsC/CMTB/integratedBathyProduct/survey/survey.ncml'
-    dir_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles'
+    bathy_ncml = 'http://134.164.129.55/thredds/dodsC/cmtb/integratedBathyProduct/survey/survey.ncml'
+    dir_loc = '/home/number/thredds_data/integratedBathyProduct/survey'
 
     # scale c and spline stuff
     # list of inputs!!!!!
@@ -74,7 +74,8 @@ def bathyWrapper():
         dSTR_e = survey_time_N.strftime('%Y-%m-%dT%H%M%SZ')
 
         mBATHY.makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=scalecDict, splineDict=splineDict, plot=None)
-
+    else:
+        print 'no new bathys'
 
 if __name__ == "__main__":
 

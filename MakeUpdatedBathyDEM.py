@@ -10,6 +10,7 @@ import datetime as DT
 from scaleCinterp_python.DEM_generator import DEM_generator, makeWBflow2D
 import pandas as pd
 from getdatatestbed import getDataFRF
+from scipy.interpolate import griddata
 
 
 
@@ -44,6 +45,8 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                         dxi - fining of the grid for spline (e.g., 0.1 means return spline on a grid that is 10x input dx)
                                 as with dxm, can be a tuple if you want separate values for dxi and dyi
                         targetvar - this is the target variance used in the spline function.
+                        wbysmooth - y-edge smoothing length scale
+                        wbxsmooth - x-edge smoothing length scale
 
                         if not specified it will default to:
                         splinebctype = 10
@@ -51,6 +54,8 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                         dxm = 2
                         dxi = 1
                         targetvar = 0.45
+                        wbysmooth = 300
+                        wbxsmooth = 100
 
     :param plot: toggle for turning plot on or off.  Anything besides None will cause it to plot
 
@@ -78,9 +83,10 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
     nc_url = 'http://134.164.129.55/thredds/dodsC/cmtb/integratedBathyProduct/survey/survey.ncml'
     # this is just the location of the ncml for the already created integrated bathy product
 
-    nc_b_loc = 'http://134.164.129.55/thredds/dodsC/cmtb/grids/TimeMeanBackgroundDEM'
-    nc_b_name = 'backgroundDEMt0_TimeMean.nc'
     # these together are the location of the standard background bathymetry that we started from.
+    nc_b_url = 'http://134.164.129.55/thredds/dodsC/cmtb/grids/TimeMeanBackgroundDEM/backgroundDEMt0_TimeMean.nc'
+
+    # pull the background from the THREDDS
 
     # Yaml files for my .nc files!!!!!
     global_yaml = '/home/number/repos/makebathyinterp/yamls/BATHY/FRFti_global.yml'
@@ -106,14 +112,16 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
         dxm = 2
         dxi = 1
         targetvar = 0.45
-        off = 10
+        wbysmooth = 300
+        wbxsmooth = 100
     else:
         splinebctype = splineDict['splinebctype']
         lc = splineDict['lc']
         dxm = splineDict['dxm']
         dxi = splineDict['dxi']
         targetvar = splineDict['targetvar']
-        off = splineDict['off']
+        wbysmooth = splineDict['wbysmooth']
+        wbxsmooth = splineDict['wbxsmooth']
 
 
     # force the survey to start at the first of the month and end at the last of the month!!!!
@@ -244,10 +252,12 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
 
                 except:
                     # load the background bathy from netDCF file if you can't get the ncml
-                    old_bathy = nc.Dataset(os.path.join(nc_b_loc, nc_b_name))
+                    # old_bathy = nc.Dataset(os.path.join(nc_b_loc, nc_b_name))
+                    old_bathy = nc.Dataset(nc_b_url)
                     Zi = old_bathy.variables['elevation'][:]
                     xFRFi_vec = old_bathy.variables['xFRF'][:]
                     yFRFi_vec = old_bathy.variables['yFRF'][:]
+
 
 
             # read out the dx and dy of the background grid!!!
@@ -260,15 +270,13 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
 
             # pre-allocate my netCDF dictionary variables here....
             elevation = np.zeros((len(surveys), rows, cols))
-            xFRF = np.zeros(cols)
-            yFRF = np.zeros(rows)
-            latitude = np.zeros((rows, cols))
-            longitude = np.zeros((rows, cols))
             surveyNumber = np.zeros(len(surveys))
             surveyTime = np.zeros(len(surveys))
+            smoothAL = np.zeros(len(surveys))
 
             # ok, now that I have the list of the surveys I am going to keep.....
             for tt in range(0, len(surveys)):
+
                 """
                 # plot the initial bathymetry...
                 fig_name = 'backgroundDEM_' + str(surveys[tt]) + '_orig' + '.png'
@@ -316,12 +324,51 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                 gridDict['yFRFi_vec'] = yFRFi_vec
 
                 # temp = subgridBounds(surveyDict, gridDict, maxSpace=249)
-                temp = subgridBounds2(surveyDict, gridDict, maxSpace=249)
+                maxSpace = 249
+                surveyFilter = True
+                temp = subgridBounds2(surveyDict, gridDict, maxSpace=maxSpace, surveyFilter=surveyFilter)
+
                 x0 = temp['x0']
                 x1 = temp['x1']
                 y0 = temp['y0']
                 y1 = temp['y1']
+
+                if surveyFilter is True:
+                    xS0 = temp['xS0']
+                    xS1 = temp['xS1']
+                    yS0 = temp['yS0']
+                    yS1 = temp['yS1']
+                    # throw out all points in the survey that are outside of these bounds!!!!
+                    test1 = np.where(dataX <= xS0, 1, 0)
+                    test2 = np.where(dataX >= xS1, 1, 0)
+                    test3 = np.where(dataY <= yS0, 1, 0)
+                    test4 = np.where(dataY >= yS1, 1, 0)
+                    test_sum = test1 + test2 + test3 + test4
+                    dataXn = dataX[test_sum >= 4]
+                    dataYn = dataY[test_sum >= 4]
+                    dataZn = dataZ[test_sum >= 4]
+                    del dataX
+                    del dataY
+                    del dataZ
+                    dataX = dataXn
+                    dataY = dataYn
+                    dataZ = dataZn
+                    del dataXn
+                    del dataYn
+                    del dataZn
+                else:
+                    pass
+
                 max_spacing = temp['max_spacing']
+
+                # if the max spacing is too high, bump up the smoothing!!
+                y_smooth_u = y_smooth  # reset y_smooth if I changed it during last step
+                if max_spacing is None:
+                    pass
+                elif 2 * max_spacing > y_smooth:
+                    y_smooth_u = int(dy * round(float(2 * max_spacing) / dy))
+                else:
+                    pass
 
                 del temp
 
@@ -330,13 +377,6 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     newZi = Zi
 
                 else:
-
-                    # if the max spacing is too high, bump up the smoothing!!
-                    y_smooth_u = y_smooth  # reset y_smooth if I changed it during last step
-                    if 2 * max_spacing > y_smooth:
-                        y_smooth_u = int(dy * round(float(2 * max_spacing) / dy))
-                    else:
-                        pass
 
                     print np.unique(survNum)
                     dict = {'x0': x0,  # gp.FRFcoord(x0, y0)['Lon'],  # -75.47218285,
@@ -350,13 +390,17 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                             'msmoothy': y_smooth_u,  # smoothing length scale in y
                             'msmootht': 1,  # smoothing length scale in Time
                             'filterName': 'hanning',
-                            'nmseitol': 0.75,
+                            # 'nmseitol': 0.75, # why did Spicer use 0.75?  Meg uses 0.25
+                            'nmseitol': 0.25,
                             'grid_coord_check': 'FRF',
                             'grid_filename': '',  # should be none if creating background Grid!  becomes best guess grid
                             'data_coord_check': 'FRF',
                             'xFRF_s': dataX,
                             'yFRF_s': dataY,
                             'Z_s': dataZ,
+                            'xFRFi_vec': xFRFi_vec,  # x-positions from the full background bathy
+                            'yFRFi_vec': yFRFi_vec,  # y-positions from the full background bathy
+                            'Zi': Zi,  # full background bathymetry elevations
                             }
 
                     out = DEM_generator(dict)
@@ -368,6 +412,34 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     NMSEn = out['NMSEi']
                     xFRFn_vec = out['x_out']
                     yFRFn_vec = out['y_out']
+
+                    # make my the mesh for the new subgrid
+                    xFRFn, yFRFn = np.meshgrid(xFRFn_vec, yFRFn_vec)
+
+
+                    """
+                    # try a standard interpolation here and see if it gives me the same thing?
+                    xFRFn2 = xFRFn.reshape((1, xFRFn.shape[0] * xFRFn.shape[1]))[0]
+                    yFRFn2 = yFRFn.reshape((1, yFRFn.shape[0] * yFRFn.shape[1]))[0]
+                    vecZ2 = griddata((dataX, dataY), dataZ, (xFRFn2, yFRFn2))
+                    gridZ2 = vecZ2.reshape((xFRFn.shape[0], xFRFn.shape[1]))
+
+                    # location of these figures
+                    temp_fig_loc = fig_loc
+                
+                    # plot the Zn from stamdard gridata to compare with my DEM_generator output
+                    fig_name = 'griddataDEM_' + str(surveys[tt]) + '.png'
+                    plt.pcolor(xFRFn, yFRFn, gridZ2, cmap=plt.cm.jet, vmin=-13, vmax=5)
+                    cbar = plt.colorbar()
+                    cbar.set_label('(m)')
+                    plt.scatter(dataX, dataY, marker='o', c='k', s=1, alpha=0.25, label='Transects')
+                    plt.xlabel('xFRF (m)')
+                    plt.ylabel('yFRF (m)')
+                    plt.legend()
+                    plt.savefig(os.path.join(temp_fig_loc, fig_name))
+                    plt.close()
+                    """
+
 
                     """
                     # Fig 4 in the TN?
@@ -392,10 +464,6 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     plt.close()
                     """
 
-
-                    # make my the mesh for the new subgrid
-                    xFRFn, yFRFn = np.meshgrid(xFRFn_vec, yFRFn_vec)
-
                     x1 = np.where(xFRFi_vec == min(xFRFn_vec))[0][0]
                     x2 = np.where(xFRFi_vec == max(xFRFn_vec))[0][0]
                     y1 = np.where(yFRFi_vec == min(yFRFn_vec))[0][0]
@@ -407,93 +475,207 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     Zdiff = Zn - Zi_s
 
                     # spline time?
+                    MSEn = np.power(MSEn, 2)
                     wb = 1 - np.divide(MSEn, targetvar + MSEn)
 
+                    wb_dict = {'x_grid': xFRFn,
+                               'y_grid': yFRFn,
+                               'ax': wbxsmooth / float(max(xFRFn_vec)),
+                               'ay': wbysmooth / float(max(yFRFn_vec)),
+                               }
 
-                    newZdiff = DLY_bspline(Zdiff, splinebctype=splinebctype, off=off, lc=None)
-                    newZdiff2 = bspline_pertgrid(newZdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
-                    # newZdiff2 = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
+                    wb_spline = makeWBflow2D(wb_dict)
+                    wb = np.multiply(wb, wb_spline)
 
+                    newZdiff = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
+                    newZn = Zi_s + newZdiff
 
-                    newZn = Zi_s + newZdiff2
-
-
-                    """
                     # Fig 5 in the TN?
                     # sample cross sections!!!!!!
 
                     # location of these figures
                     temp_fig_loc = fig_loc
 
-                    x_loc_check1 = int(100)
-                    x_loc_check2 = int(200)
-                    x_loc_check3 = int(350)
-                    x_check1 = np.where(xFRFn_vec == x_loc_check1)[0][0]
-                    x_check2 = np.where(xFRFn_vec == x_loc_check2)[0][0]
-                    x_check3 = np.where(xFRFn_vec == x_loc_check3)[0][0]
+                    try:
+                        x_loc_check1 = int(100)
+                        x_loc_check2 = int(200)
+                        x_loc_check3 = int(350)
+                        x_check1 = np.where(xFRFn_vec == x_loc_check1)[0][0]
+                        x_check2 = np.where(xFRFn_vec == x_loc_check2)[0][0]
+                        x_check3 = np.where(xFRFn_vec == x_loc_check3)[0][0]
 
 
-                    # plot X and Y transects from newZdiff to see if it looks correct?
-                    fig_name = 'backgroundDEM_' + yrs_dir + '-' + months[jj] + '-' + str(surveys[tt]) + '_Ytrans_X' + str(x_loc_check1) + '_X' + str(x_loc_check2) + '_X' + str(x_loc_check3) + '.png'
+                        # plot X and Y transects from newZdiff to see if it looks correct?
+                        fig_name = 'backgroundDEM_' + yrs_dir + '-' + months[jj] + '-' + str(surveys[tt]) + '_Ytrans_X' + str(x_loc_check1) + '_X' + str(x_loc_check2) + '_X' + str(x_loc_check3) + '.png'
 
-                    fig = plt.figure(figsize=(8, 9))
-                    ax1 = plt.subplot2grid((3, 1), (0, 0), colspan=1)
-                    ax1.plot(yFRFn[:, x_check1], Zn[:, x_check1], 'r', label='Original')
-                    ax1.plot(yFRFn[:, x_check1], newZn[:, x_check1], 'b', label='Splined')
-                    ax1.plot(yFRFn[:, x_check1], Zi_s[:, x_check1], 'k--', label='Background')
-                    ax1.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
-                    ax1.set_ylabel('Elevation ($m$)', fontsize=16)
-                    ax1.set_title('$X=%s$' %(str(x_loc_check1)), fontsize=16)
-                    for tick in ax1.xaxis.get_major_ticks():
-                        tick.label.set_fontsize(14)
-                    for tick in ax1.yaxis.get_major_ticks():
-                        tick.label.set_fontsize(14)
-                    ax1.tick_params(labelsize=14)
-                    ax1.legend()
-                    ax1.text(0.10, 0.95, '(a)', horizontalalignment='left', verticalalignment='top', transform=ax1.transAxes, fontsize=16)
+                        fig = plt.figure(figsize=(8, 9))
+                        ax1 = plt.subplot2grid((3, 1), (0, 0), colspan=1)
+                        ax1.plot(yFRFn[:, x_check1], Zn[:, x_check1], 'r', label='Original')
+                        ax1.plot(yFRFn[:, x_check1], newZn[:, x_check1], 'b', label='Splined')
+                        ax1.plot(yFRFn[:, x_check1], Zi_s[:, x_check1], 'k--', label='Background')
+                        ax4 = ax1.twinx()
+                        ax4.plot(yFRFn[:, x_check1], wb[:, x_check1], 'g--', label='Weights')
+                        ax4.tick_params('y', colors='g')
+                        ax4.set_ylabel('Weights', fontsize=16)
+                        ax4.yaxis.label.set_color('green')
+                        ax1.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
+                        ax1.set_ylabel('Elevation ($m$)', fontsize=16)
+                        ax1.set_title('$X=%s$' %(str(x_loc_check1)), fontsize=16)
+                        for tick in ax1.xaxis.get_major_ticks():
+                            tick.label.set_fontsize(14)
+                        for tick in ax1.yaxis.get_major_ticks():
+                            tick.label.set_fontsize(14)
+                        ax1.tick_params(labelsize=14)
+                        ax1.legend()
+                        ax1.text(0.10, 0.95, '(a)', horizontalalignment='left', verticalalignment='top', transform=ax1.transAxes, fontsize=16)
 
-                    ax2 = plt.subplot2grid((3, 1), (1, 0), colspan=1)
-                    ax2.plot(yFRFn[:, x_check2], Zn[:, x_check2], 'r', label='Original')
-                    ax2.plot(yFRFn[:, x_check2], newZn[:, x_check2], 'b', label='Splined')
-                    ax2.plot(yFRFn[:, x_check2], Zi_s[:, x_check2], 'k--', label='Background')
-                    ax2.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
-                    ax2.set_ylabel('Elevation ($m$)', fontsize=16)
-                    ax2.set_title('$X=%s$' % (str(x_loc_check2)), fontsize=16)
-                    for tick in ax2.xaxis.get_major_ticks():
-                        tick.label.set_fontsize(14)
-                    for tick in ax2.yaxis.get_major_ticks():
-                        tick.label.set_fontsize(14)
-                    ax2.tick_params(labelsize=14)
-                    ax2.legend()
-                    ax2.text(0.10, 0.95, '(b)', horizontalalignment='left', verticalalignment='top', transform=ax2.transAxes, fontsize=16)
+                        ax2 = plt.subplot2grid((3, 1), (1, 0), colspan=1)
+                        ax2.plot(yFRFn[:, x_check2], Zn[:, x_check2], 'r', label='Original')
+                        ax2.plot(yFRFn[:, x_check2], newZn[:, x_check2], 'b', label='Splined')
+                        ax2.plot(yFRFn[:, x_check2], Zi_s[:, x_check2], 'k--', label='Background')
+                        ax5 = ax2.twinx()
+                        ax5.plot(yFRFn[:, x_check2], wb[:, x_check2], 'g--', label='Weights')
+                        ax5.tick_params('y', colors='g')
+                        ax5.set_ylabel('Weights', fontsize=16)
+                        ax5.yaxis.label.set_color('green')
+                        ax2.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
+                        ax2.set_ylabel('Elevation ($m$)', fontsize=16)
+                        ax2.set_title('$X=%s$' % (str(x_loc_check2)), fontsize=16)
+                        for tick in ax2.xaxis.get_major_ticks():
+                            tick.label.set_fontsize(14)
+                        for tick in ax2.yaxis.get_major_ticks():
+                            tick.label.set_fontsize(14)
+                        ax2.tick_params(labelsize=14)
+                        ax2.legend()
+                        ax2.text(0.10, 0.95, '(b)', horizontalalignment='left', verticalalignment='top', transform=ax2.transAxes, fontsize=16)
 
-                    ax3 = plt.subplot2grid((3, 1), (2, 0), colspan=1)
-                    ax3.plot(yFRFn[:, x_check3], Zn[:, x_check3], 'r', label='Original')
-                    ax3.plot(yFRFn[:, x_check3], newZn[:, x_check3], 'b', label='Splined')
-                    ax3.plot(yFRFn[:, x_check3], Zi_s[:, x_check3], 'k--', label='Background')
-                    ax3.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
-                    ax3.set_ylabel('Elevation ($m$)', fontsize=16)
-                    ax3.set_title('$X=%s$' % (str(x_loc_check3)), fontsize=16)
-                    for tick in ax3.xaxis.get_major_ticks():
-                        tick.label.set_fontsize(14)
-                    for tick in ax3.yaxis.get_major_ticks():
-                        tick.label.set_fontsize(14)
-                    ax3.tick_params(labelsize=14)
-                    ax3.legend()
-                    ax3.text(0.10, 0.95, '(c)', horizontalalignment='left', verticalalignment='top', transform=ax3.transAxes, fontsize=16)
+                        ax3 = plt.subplot2grid((3, 1), (2, 0), colspan=1)
+                        ax3.plot(yFRFn[:, x_check3], Zn[:, x_check3], 'r', label='Original')
+                        ax3.plot(yFRFn[:, x_check3], newZn[:, x_check3], 'b', label='Splined')
+                        ax3.plot(yFRFn[:, x_check3], Zi_s[:, x_check3], 'k--', label='Background')
+                        ax6 = ax3.twinx()
+                        ax6.plot(yFRFn[:, x_check3], wb[:, x_check3], 'g--', label='Weights')
+                        ax6.set_ylabel('Weights', fontsize=16)
+                        ax6.tick_params('y', colors='g')
+                        ax6.yaxis.label.set_color('green')
+                        ax3.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
+                        ax3.set_ylabel('Elevation ($m$)', fontsize=16)
+                        ax3.set_title('$X=%s$' % (str(x_loc_check3)), fontsize=16)
+                        for tick in ax3.xaxis.get_major_ticks():
+                            tick.label.set_fontsize(14)
+                        for tick in ax3.yaxis.get_major_ticks():
+                            tick.label.set_fontsize(14)
+                        ax3.tick_params(labelsize=14)
+                        ax3.legend()
+                        ax3.text(0.10, 0.95, '(c)', horizontalalignment='left', verticalalignment='top', transform=ax3.transAxes, fontsize=16)
 
-                    fig.subplots_adjust(wspace=0.4, hspace=0.1)
-                    fig.tight_layout(pad=1, h_pad=2.5, w_pad=1, rect=[0.0, 0.0, 1.0, 0.925])
-                    fig.savefig(os.path.join(temp_fig_loc, fig_name), dpi=300)
+                        fig.subplots_adjust(wspace=0.4, hspace=0.1)
+                        fig.tight_layout(pad=1, h_pad=2.5, w_pad=1, rect=[0.0, 0.0, 1.0, 0.925])
+                        fig.savefig(os.path.join(temp_fig_loc, fig_name), dpi=300)
+                        plt.close()
+                    except:
+                        pass
+
+                    try:
+                        y_loc_check1 = int(250)
+                        y_loc_check2 = int(500)
+                        y_loc_check3 = int(750)
+                        y_check1 = np.where(yFRFn_vec == y_loc_check1)[0][0]
+                        y_check2 = np.where(yFRFn_vec == y_loc_check2)[0][0]
+                        y_check3 = np.where(yFRFn_vec == y_loc_check3)[0][0]
+                        # plot a transect going in the cross-shore just to check it
+                        fig_name = 'backgroundDEM_' + yrs_dir + '-' + months[jj] + '-' + str(
+                            surveys[tt]) + '_Xtrans_Y' + str(y_loc_check1) + '_Y' + str(y_loc_check2) + '_Y' + str(
+                            y_loc_check3) + '.png'
+
+                        fig = plt.figure(figsize=(8, 9))
+                        ax1 = plt.subplot2grid((3, 1), (0, 0), colspan=1)
+                        ax1.plot(xFRFn[y_check1, :], Zn[y_check1, :], 'r', label='Original')
+                        ax1.plot(xFRFn[y_check1, :], newZn[y_check1, :], 'b', label='Splined')
+                        ax1.plot(xFRFn[y_check1, :], Zi_s[y_check1, :], 'k--', label='Background')
+                        ax4 = ax1.twinx()
+                        ax4.plot(xFRFn[y_check1, :], wb[y_check1, :], 'g--', label='Weights')
+                        ax4.tick_params('y', colors='g')
+                        ax4.set_ylabel('Weights', fontsize=16)
+                        ax4.yaxis.label.set_color('green')
+                        ax1.set_xlabel('Cross-shore - $x$ ($m$)', fontsize=16)
+                        ax1.set_ylabel('Elevation ($m$)', fontsize=16)
+                        ax1.set_title('$Y=%s$' % (str(y_loc_check1)), fontsize=16)
+                        for tick in ax1.xaxis.get_major_ticks():
+                            tick.label.set_fontsize(14)
+                        for tick in ax1.yaxis.get_major_ticks():
+                            tick.label.set_fontsize(14)
+                        ax1.tick_params(labelsize=14)
+                        ax1.legend()
+                        ax1.text(0.10, 0.95, '(a)', horizontalalignment='left', verticalalignment='top',
+                                 transform=ax1.transAxes, fontsize=16)
+
+                        ax2 = plt.subplot2grid((3, 1), (1, 0), colspan=1)
+                        ax2.plot(xFRFn[y_check2, :], Zn[y_check2, :], 'r', label='Original')
+                        ax2.plot(xFRFn[y_check2, :], newZn[y_check2, :], 'b', label='Splined')
+                        ax2.plot(xFRFn[y_check2, :], Zi_s[y_check2, :], 'k--', label='Background')
+                        ax5 = ax2.twinx()
+                        ax5.plot(xFRFn[y_check2, :], wb[y_check2, :], 'g--', label='Weights')
+                        ax5.tick_params('y', colors='g')
+                        ax5.set_ylabel('Weights', fontsize=16)
+                        ax5.yaxis.label.set_color('green')
+                        ax2.set_xlabel('Cross-shore - $x$ ($m$)', fontsize=16)
+                        ax2.set_ylabel('Elevation ($m$)', fontsize=16)
+                        ax2.set_title('$Y=%s$' % (str(y_loc_check2)), fontsize=16)
+                        for tick in ax2.xaxis.get_major_ticks():
+                            tick.label.set_fontsize(14)
+                        for tick in ax2.yaxis.get_major_ticks():
+                            tick.label.set_fontsize(14)
+                        ax2.tick_params(labelsize=14)
+                        ax2.legend()
+                        ax2.text(0.10, 0.95, '(b)', horizontalalignment='left', verticalalignment='top',
+                                 transform=ax2.transAxes, fontsize=16)
+
+                        ax3 = plt.subplot2grid((3, 1), (2, 0), colspan=1)
+                        ax3.plot(xFRFn[y_check3, :], Zn[y_check3, :], 'r', label='Original')
+                        ax3.plot(xFRFn[y_check3, :], newZn[y_check3, :], 'b', label='Splined')
+                        ax3.plot(xFRFn[y_check3, :], Zi_s[y_check3, :], 'k--', label='Background')
+                        ax6 = ax3.twinx()
+                        ax6.plot(xFRFn[y_check3, :], wb[y_check3, :], 'g--', label='Weights')
+                        ax6.set_ylabel('Weights', fontsize=16)
+                        ax6.tick_params('y', colors='g')
+                        ax6.yaxis.label.set_color('green')
+                        ax3.set_xlabel('Cross-shore - $x$ ($m$)', fontsize=16)
+                        ax3.set_ylabel('Elevation ($m$)', fontsize=16)
+                        ax3.set_title('$Y=%s$' % (str(y_loc_check3)), fontsize=16)
+                        for tick in ax3.xaxis.get_major_ticks():
+                            tick.label.set_fontsize(14)
+                        for tick in ax3.yaxis.get_major_ticks():
+                            tick.label.set_fontsize(14)
+                        ax3.tick_params(labelsize=14)
+                        ax3.legend()
+                        ax3.text(0.10, 0.95, '(c)', horizontalalignment='left', verticalalignment='top',
+                                 transform=ax3.transAxes, fontsize=16)
+
+                        fig.subplots_adjust(wspace=0.4, hspace=0.1)
+                        fig.tight_layout(pad=1, h_pad=2.5, w_pad=1, rect=[0.0, 0.0, 1.0, 0.925])
+                        fig.savefig(os.path.join(temp_fig_loc, fig_name), dpi=300)
+                        plt.close()
+                    except:
+                        pass
+
+                    # plot each newZn to see if it looks ok
+                    fig_name = 'newDEM_' + str(surveys[tt]) + '.png'
+                    plt.pcolor(xFRFn, yFRFn, newZn, cmap=plt.cm.jet, vmin=-13, vmax=5)
+                    cbar = plt.colorbar()
+                    cbar.set_label('(m)')
+                    plt.scatter(dataX, dataY, marker='o', c='k', s=1, alpha=0.25, label='Transects')
+                    plt.xlabel('xFRF (m)')
+                    plt.ylabel('yFRF (m)')
+                    plt.legend()
+                    plt.savefig(os.path.join(temp_fig_loc, fig_name))
                     plt.close()
-                    """
+
+
 
                     # get my new pretty splined grid
                     newZi = Zi.copy()
                     newZi[y1:y2 + 1, x1:x2 + 1] = newZn
-
-
-
 
 
                     """
@@ -506,10 +688,9 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     plt.xlabel('xFRF (m)')
                     plt.ylabel('yFRF (m)')
                     plt.legend()
-                    plt.savefig(os.path.join(fig_loc, fig_name))
+                    plt.savefig(os.path.join(temp_fig_loc, fig_name))
                     plt.close()
                     """
-
 
                 # update Zi for next iteration
                 del Zi
@@ -519,6 +700,8 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                 surveyNumber[tt] = np.unique(survNum)[0]
                 timeunits = 'seconds since 1970-01-01 00:00:00'
                 surveyTime[tt] = nc.date2num(stimeM, timeunits)
+                smoothAL[tt] = y_smooth_u
+
                 # timeM is the mean time between the first and last time of the survey rounded to the nearest 12 hours
                 # this is going to be the date and time of the survey to the closest noon.
                 # remember it needs to be in seconds since 1970
@@ -559,8 +742,9 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
             # also want survey number and survey time....
             nc_dict['surveyNumber'] = surveyNumber
             nc_dict['time'] = surveyTime
+            nc_dict['y_smooth'] = smoothAL
 
-            nc_name = 'FRF-updated_bathy_dem_transects_' + yrs_dir + months[jj] + '.nc'
+            nc_name = 'CMTB-integratedBathyProduct_survey_' + yrs_dir + months[jj] + '.nc'
 
             # save this location for next time through the loop
             prev_nc_name = nc_name
@@ -868,7 +1052,7 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, sp
     # background_url = 'http://134.164.129.62:8080/thredds/dodsC/CMTB/grids/UpdatedBackgroundDEM/UpdatedBackgroundDEM.ncml'
     # this is just the location of the ncml for the already created UpdatedDEM
 
-    nc_b_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles_gridded'
+    nc_b_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles_CBATHY'
     nc_b_name = 'backgroundDEMt0_TimeMean.nc'
     # these together are the location of the standard background bathymetry that we started from.
 
@@ -895,8 +1079,9 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, sp
         dxm = 2
         dxi = 1
         targetvar = 0.45
-        wbysmooth = 300
-        wbxsmooth = 100
+
+        wbysmooth = 300  # y-edge smoothing scale
+        wbxsmooth = 100  # x-edge smoothing scale
     else:
         splinebctype = splineDict['splinebctype']
         lc = splineDict['lc']
@@ -905,6 +1090,7 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, sp
         targetvar = splineDict['targetvar']
         wbxsmooth = splineDict['wbxsmooth']
         wbysmooth = splineDict['wbysmooth']
+
 
     # force the survey to start at the first of the month and end at the last of the month!!!!
     dSTR_s = dSTR_s[0:7] + '-01T00:00:00Z'
@@ -1193,12 +1379,8 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, sp
                 wb_spline = makeWBflow2D(wb_dict)
                 wb = np.multiply(wb, wb_spline)
 
-                # do the spline like a boss
                 newZdiff = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
                 newZn = Zi_s + newZdiff
-
-                # get my new pretty splined grid
-                newZi = Zi.copy()
 
                 # get my new pretty splined grid
                 newZi = Zi.copy()
@@ -1367,9 +1549,9 @@ def getGridded(ncml_url, d1, d2):
     return out
 
 
-def subgridBounds2(surveyDict, gridDict, xMax=1290, maxSpace=149):
+def subgridBounds2(surveyDict, gridDict, xMax=1290, maxSpace=149, surveyFilter=False):
     """
-    # this function determines the bounds of the subgrid we are going to generate from the trasect data
+    # this function determines the bounds of the subgrid we are going to generate from the transect data
 
     # basic logic is that first we are only going to use the largest block of consecutive profile lines
     for which the mean yFRF position does not exceed maxSpace.  Then, of those that remain,
@@ -1417,13 +1599,13 @@ def subgridBounds2(surveyDict, gridDict, xMax=1290, maxSpace=149):
         Yprof = dataY[np.where(profNum == profNum_list[ss])]
         prof_meanY[ss] = np.mean(Yprof)
 
-    #stick this in pandas df
+    # stick this in pandas df
     columns = ['profNum']
     df = pd.DataFrame(profNum_list, columns=columns)
     df['prof_meanY'] = prof_meanY
     # sort them by mean Y
     df.sort_values(['prof_meanY'], ascending=1, inplace=True)
-    #reindex
+    # reindex
     df.reset_index(drop=True, inplace=True)
 
     # figure out the differences!!!!!
@@ -1557,6 +1739,79 @@ def subgridBounds2(surveyDict, gridDict, xMax=1290, maxSpace=149):
         # currently using the median of the min and max X extends of each profile,
         # and just the min and max of the y-extents of all the profiles.
 
+
+        # round them again because somehow this is giving us non-whole numbers
+        # round it to nearest dx or dy
+        # minX
+        if x1 >= 0:
+            x1 = x1 - (x1 % dx)
+        else:
+            x1 = x1 - (x1 % dx) + dx
+
+        # maxX
+        if x0 >= 0:
+            x0 = x0 - (x0 % dx)
+        else:
+            x0 = x0 - (x0 % dx) + dx
+
+        # minY
+        if y0 >= 0:
+            y0 = y0 - (y0 % dy)
+        else:
+            y0 = y0 - (y0 % dy) + dy
+
+        # maxY
+        if y1 >= 0:
+            y1 = y1 - (y1 % dy)
+        else:
+            y1 = y1 - (y1 % dy) + dy
+
+        if surveyFilter is True:
+            # what do I want my survey stuff to be?
+            xS0 = x0.copy()
+            xS1 = x1.copy()
+            yS0 = y0.copy()
+            yS1 = y1.copy()
+
+            """
+            # do I want to come in some here?  i..e, throw out points that are close to the edge?
+            xS0 = xS0 - 20 * dx
+            xS1 = xS1 + 20 * dx
+            yS0 = yS0 - 20 * dy
+            yS1 = yS1 + 20 * dy
+            """
+
+            """
+            # also artificially push my bounds out a little bit...
+            x0 = x0 + 20 * dx
+            x1 = x1 - 20 * dx
+            y0 = y0 + 20 * dy
+            y1 = y1 - 20 * dy
+            """
+
+
+        else:
+            pass
+
+        """
+        # go ahead and move in some buffer spacing?
+        base = 50
+        buffer = int(base * round(float(2*maxSpace) / base))
+        x0 = x0 + buffer
+        x1 = x1 - buffer
+        y0 = y0 + buffer
+        y1 = y1 - buffer
+        """
+
+
+
+        # go IN one node?
+        x0 = x0 - dx
+        x1 = x1 + dx
+        y0 = y0 - dy
+        y1 = y1 + dy
+
+
         # check to see if this is past the bounds of your background DEM.
         # if so, truncate so that it does not exceed.
         if x0 > max(xFRFi_vec):
@@ -1583,7 +1838,453 @@ def subgridBounds2(surveyDict, gridDict, xMax=1290, maxSpace=149):
         out['y1'] = y1
         out['max_spacing'] = max_spacing
 
+        if surveyFilter is True:
+            # check to see if this is past the bounds of your background DEM.
+            # if so, truncate so that it does not exceed.
+            if xS0 > max(xFRFi_vec):
+                xS0 = xMax - dx
+            else:
+                pass
+            if xS1 < min(xFRFi_vec):
+                xS1 = min(xFRFi_vec) + dx
+            else:
+                pass
+            if yS0 > max(yFRFi_vec):
+                yS0 = max(yFRFi_vec) - dy
+            else:
+                pass
+            if yS1 < min(yFRFi_vec):
+                yS1 = min(yFRFi_vec) + dy
+            else:
+                pass
+
+            out['xS0'] = xS0
+            out['xS1'] = xS1
+            out['yS0'] = yS0
+            out['yS1'] = yS1
+        else:
+            pass
+
+
+
     return out
+
+
+def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
+    """
+
+    :param backgroundDict: keys are:
+                        elevation - 2D matrix containing the elevations at every node for
+                                    whatever my background is supposed to be for this run
+                        xFRF - 1D array of xFRF positions corresponding to the second dimension of elevation
+                        yFRF - 1D array of yFRF positions corresponding to the first dimension of elevation
+    :param newDict: keys are:
+                        elevation - this will probably either be a 1D array of elevations from a survey or a 3D array of
+                                    elevations where the first dimension is time and the next two are y and X, respectively.
+                                    If it gets a 2D array it assumes it is a gridded bathymetry with only one time.
+                        xFRF - this will either be a 1D array of x-values corresponding to the points of the survey,
+                               a 1D array corresponding to the x dimension of elevation, or a 2D array that is a
+                               meshgrid of the x-values corresponding to the elevations.
+                               The script should be smart enough to tell which type of 1D array it is.
+                        yFRF - this will either be a 1D array of y-values corresponding to the points of the survey,
+                               a 1D array corresponding to the y dimension of elevation, or a 2D array that is a
+                               meshgrid of the y-values corresponding to the elevations.
+                               The script should be smart enough to tell which type of 1D array it is.
+                        surveyNumber - these are the survey numbers of every point in the survey
+                                       (so one for every point in elevation if elevation comes from survey data).
+                                       This is not required if the new data is gridded
+                        profileNumber - these are the profile numbers of every point in the survey
+                                       (so one for every point in elevation if elevation comes from survey data).
+                                       This is not required if the new data is gridded
+    :param scalecDict: keys are:
+                        x_smooth - x direction smoothing length for scalecInterp
+                        y_smooth - y direction smoothing length for scalecInterp
+
+                        if not specified it will default to:
+                        x_smooth = 100
+                        y_smooth = 200
+    :param splineDict: keys are:
+                        splinebctype
+                            options are....
+                            2 - second derivative goes to zero at boundary
+                            1 - first derivative goes to zero at boundary
+                            0 - value is zero at boundary
+                            10 - force value and derivative(first?!?) to zero at boundary
+                        lc - spline smoothing constraint value (integer <= 1)
+                        dxm -  coarsening of the grid for spline (e.g., 2 means calculate with a dx that is 2x input dx)
+                                can be tuple if you want to do dx and dy separately (dxm, dym), otherwise dxm is used for both
+                        dxi - fining of the grid for spline (e.g., 0.1 means return spline on a grid that is 10x input dx)
+                                as with dxm, can be a tuple if you want separate values for dxi and dyi
+                        targetvar - this is the target variance used in the spline function.
+                        wbysmooth - y-edge smoothing length scale
+                        wbxsmooth - x-edge smoothing length scale
+
+                        if not specified it will default to:
+                        splinebctype = 10
+                        lc = 4
+                        dxm = 2
+                        dxi = 1
+                        targetvar = 0.45
+                        wbysmooth = 300
+                        wbxsmooth = 100
+    :return:
+            out:
+            keys are:
+            elevation: will always be a 3D array, first dim either corresponds to each survey number
+                       or the first dimension of the input elevation data and the second
+                       two dimensions the same size as backgroundDict['evelation']
+            smoothAL: 1D array corresponding to the smoothing scale used for each grid
+                      (they will all be identical if using gridded data because there is no mechanism to change it)
+            xFRF:   exact same as backgroundDict['xFRF']
+            yFRF:   exact same as backgroundDict['xFRF']
+            surveyNumber: 1D array corresponding to the survey numbers for each grid.
+                          This will not exist if the input data was a grid
+    """
+
+
+    # check scalecDict and splineDict
+    if scalecDict is None:
+        x_smooth = 100  # scale c interp x-direction smoothing
+        y_smooth = 200  # scale c interp y-direction smoothing
+    else:
+        x_smooth = scalecDict['x_smooth']  # scale c interp x-direction smoothing
+        y_smooth = scalecDict['y_smooth']  # scale c interp y-direction smoothing
+
+    if splineDict is None:
+        splinebctype = 10
+        lc = 4
+        dxm = 2
+        dxi = 1
+        targetvar = 0.45
+        wbysmooth = 300  # y-edge smoothing scale
+        wbxsmooth = 100  # x-edge smoothing scale
+    else:
+        splinebctype = splineDict['splinebctype']
+        lc = splineDict['lc']
+        dxm = splineDict['dxm']
+        dxi = splineDict['dxi']
+        targetvar = splineDict['targetvar']
+        wbysmooth = splineDict['wbysmooth']
+        wbxsmooth = splineDict['wbxsmooth']
+
+
+    # load my background grid information
+    Zi = backgroundDict['elevation']
+    xFRFi_vec = backgroundDict['xFRF']
+    yFRFi_vec = backgroundDict['yFRF']
+    # read out the dx and dy of the background grid!!!
+    # assume this is constant grid spacing!!!!!
+    dx = abs(xFRFi_vec[1] - xFRFi_vec[0])
+    dy = abs(yFRFi_vec[1] - yFRFi_vec[0])
+    xFRFi, yFRFi = np.meshgrid(xFRFi_vec, yFRFi_vec)
+    rows, cols = np.shape(xFRFi)
+
+    # pull some stuff from my new data and check the dimension size
+    newX = np.array(newDict['xFRF'])
+    newY = np.array(newDict['yFRF'])
+    newZ = np.array(newDict['elevation'])
+
+    # check number of dimensions of dataZ
+    if newZ.ndim <= 1:
+        # this is survey data
+        grid = 0
+        survNum = newDict['surveyNumber']
+        surveyList = np.unique(survNum)
+        profNum = newDict['profileNumber']
+        num_iter = len(surveyList)
+    else:
+        grid = 1
+        num_iter = np.shape(newZ)[0]
+
+    # show time
+
+    # pre-allocate my netCDF dictionary variables here....
+    elevation = np.zeros((num_iter, rows, cols))
+    smoothAL = np.zeros(num_iter)
+    if grid:
+        pass
+    else:
+        surveyNumber = np.zeros(num_iter)
+
+    for tt in range(0, num_iter):
+
+        if grid:
+
+            # get my stuff out
+            if newZ.ndim <= 2:
+                # this would mean you only handed it a 2D matrix containing ONE cbathy!!!!!!!!!!
+                zV = newZ
+            else:
+                zV = newZ[tt, :, :]
+
+            # were you handed a 2D array of X's and Y's or a 1D vector corresponding to that dimension?
+            if np.size(zV) == np.size(newX):
+                # must have been handed a meshgrid
+                xV = newX
+                yV = newY
+            else:
+                # just a 1D array, turn it into a meshgrid
+                xV, yV = np.meshgrid(newX, newY)
+
+
+            # what are my subgrid bounds?
+            x0 = np.max(xV)
+            y0 = np.max(yV)
+            x1 = np.min(xV)
+            y1 = np.min(yV)
+
+            # round it to nearest dx or dy
+            # minX
+            if x1 >= 0:
+                x1 = x1 - (x1 % dx)
+            else:
+                x1 = x1 - (x1 % dx) + dx
+
+            # maxX
+            if x0 >= 0:
+                x0 = x0 - (x0 % dx)
+            else:
+                x0 = x0 - (x0 % dx) + dx
+
+            # minY
+            if y1 >= 0:
+                y1 = y1 - (y1 % dy)
+            else:
+                y1 = y1 - (y1 % dy) + dy
+
+            # maxY
+            if y0 >= 0:
+                y0 = y0 - (y0 % dy)
+            else:
+                y0 = y0 - (y0 % dy) + dy
+
+            # make sure they are inside the bounds of my bigger grid
+            # if so, truncate so that it does not exceed.
+            if x0 > max(xFRFi_vec):
+                x0 = max(xFRFi_vec)
+            else:
+                pass
+            if x1 < min(xFRFi_vec):
+                x1 = min(xFRFi_vec)
+            else:
+                pass
+            if y0 > max(yFRFi_vec):
+                y0 = max(yFRFi_vec)
+            else:
+                pass
+            if y1 < min(yFRFi_vec):
+                y1 = min(yFRFi_vec)
+            else:
+                pass
+
+            #reshape it to pass to DEM generator
+            dataX, dataY, dataZ = [], [], []
+            dataX = np.reshape(xV, (np.shape(xV)[0] * np.shape(xV)[1], 1)).flatten()
+            dataY = np.reshape(yV, (np.shape(yV)[0] * np.shape(yV)[1], 1)).flatten()
+            dataZ = np.reshape(zV, (np.shape(zV)[0] * np.shape(zV)[1], 1)).flatten()
+
+            # specify y_smoothing
+            y_smooth_u = y_smooth
+
+        else:
+
+            # get the times of each survey
+            ids = (survNum == surveyList[tt])
+
+            # pull out this stuf!!!!!!!!
+            dataX, dataY, dataZ = [], [], []
+            dataX = newX[ids]
+            dataY = newY[ids]
+            dataZ = newZ[ids]
+
+            # what are my subgrid bounds?
+            surveyDict = {}
+            surveyDict['dataX'] = dataX
+            surveyDict['dataY'] = dataY
+            surveyDict['profNum'] = profNum[ids]
+
+            gridDict = {}
+            gridDict['dx'] = dx
+            gridDict['dy'] = dy
+            gridDict['xFRFi_vec'] = xFRFi_vec
+            gridDict['yFRFi_vec'] = yFRFi_vec
+
+            # temp = subgridBounds(surveyDict, gridDict, maxSpace=249)
+            maxSpace = 249
+            surveyFilter = True
+            temp = subgridBounds2(surveyDict, gridDict, maxSpace=maxSpace, surveyFilter=surveyFilter)
+
+            x0 = temp['x0']
+            x1 = temp['x1']
+            y0 = temp['y0']
+            y1 = temp['y1']
+
+            if surveyFilter is True:
+                xS0 = temp['xS0']
+                xS1 = temp['xS1']
+                yS0 = temp['yS0']
+                yS1 = temp['yS1']
+                # throw out all points in the survey that are outside of these bounds!!!!
+                test1 = np.where(dataX <= xS0, 1, 0)
+                test2 = np.where(dataX >= xS1, 1, 0)
+                test3 = np.where(dataY <= yS0, 1, 0)
+                test4 = np.where(dataY >= yS1, 1, 0)
+                test_sum = test1 + test2 + test3 + test4
+                dataXn = dataX[test_sum >= 4]
+                dataYn = dataY[test_sum >= 4]
+                dataZn = dataZ[test_sum >= 4]
+                del dataX
+                del dataY
+                del dataZ
+                dataX = dataXn
+                dataY = dataYn
+                dataZ = dataZn
+                del dataXn
+                del dataYn
+                del dataZn
+            else:
+                pass
+
+            max_spacing = temp['max_spacing']
+
+            # if the max spacing is too high, bump up the smoothing!!
+            y_smooth_u = y_smooth  # reset y_smooth if I changed it during last step
+            if max_spacing is None:
+                pass
+            elif 2 * max_spacing > y_smooth:
+                y_smooth_u = int(dy * round(float(2 * max_spacing) / dy))
+            else:
+                pass
+
+            del temp
+
+        # ok, now it should be on to DEM generator at this point?
+        # I think the only difference after this will be if I return the survey number or not?
+        # if you wound up throwing out this survey!!!
+        if x0 is None:
+            newZi = Zi
+
+        else:
+
+            print np.unique(survNum)
+            dict = {'x0': x0,  # gp.FRFcoord(x0, y0)['Lon'],  # -75.47218285,
+                    'y0': y0,  # gp.FRFcoord(x0, y0)['Lat'],  #  36.17560399,
+                    'x1': x1,  # gp.FRFcoord(x1, y1)['Lon'],  # -75.75004989,
+                    'y1': y1,  # gp.FRFcoord(x1, y1)['Lat'],  #  36.19666112,
+                    'lambdaX': dx,
+                    # grid spacing in x  -  Here is where CMS would hand array of variable grid spacing
+                    'lambdaY': dy,  # grid spacing in y
+                    'msmoothx': x_smooth,  # smoothing length scale in x
+                    'msmoothy': y_smooth_u,  # smoothing length scale in y
+                    'msmootht': 1,  # smoothing length scale in Time
+                    'filterName': 'hanning',
+                    # 'nmseitol': 0.75, # why did Spicer use 0.75?  Meg uses 0.25
+                    'nmseitol': 0.25,
+                    'grid_coord_check': 'FRF',
+                    'grid_filename': '',  # should be none if creating background Grid!  becomes best guess grid
+                    'data_coord_check': 'FRF',
+                    'xFRF_s': dataX,
+                    'yFRF_s': dataY,
+                    'Z_s': dataZ,
+                    'xFRFi_vec': xFRFi_vec,  # x-positions from the full background bathy
+                    'yFRFi_vec': yFRFi_vec,  # y-positions from the full background bathy
+                    'Zi': Zi,  # full background bathymetry elevations
+                    }
+
+            out = DEM_generator(dict)
+
+            # read some stuff from this dict like a boss
+            Zn = out['Zi']
+            MSEn = out['MSEi']
+            MSRn = out['MSRi']
+            NMSEn = out['NMSEi']
+            xFRFn_vec = out['x_out']
+            yFRFn_vec = out['y_out']
+
+            # make my the mesh for the new subgrid
+            xFRFn, yFRFn = np.meshgrid(xFRFn_vec, yFRFn_vec)
+
+            # where does this subgrid fit in my larger background grid?
+            x1 = np.where(xFRFi_vec == min(xFRFn_vec))[0][0]
+            x2 = np.where(xFRFi_vec == max(xFRFn_vec))[0][0]
+            y1 = np.where(yFRFi_vec == min(yFRFn_vec))[0][0]
+            y2 = np.where(yFRFi_vec == max(yFRFn_vec))[0][0]
+
+            Zi_s = Zi[y1:y2 + 1, x1:x2 + 1]
+
+            # get the difference!!!!
+            Zdiff = Zn - Zi_s
+
+            # spline time?
+            MSEn = np.power(MSEn, 2)
+            wb = 1 - np.divide(MSEn, targetvar + MSEn)
+
+            wb_dict = {'x_grid': xFRFn,
+                       'y_grid': yFRFn,
+                       'ax': wbxsmooth / float(max(xFRFn_vec)),
+                       'ay': wbysmooth / float(max(yFRFn_vec)),
+                       }
+
+            wb_spline = makeWBflow2D(wb_dict)
+            wb = np.multiply(wb, wb_spline)
+
+            newZdiff = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
+            newZn = Zi_s + newZdiff
+
+            # get my new pretty splined grid
+            newZi = Zi.copy()
+            newZi[y1:y2 + 1, x1:x2 + 1] = newZn
+
+
+        # update Zi for next iteration
+        del Zi
+        Zi = newZi
+
+        # go ahead and stack this stuff in my new variables I am building
+        elevation[tt, :, :] = newZi
+        smoothAL[tt] = y_smooth_u
+        if grid:
+            pass
+        else:
+            surveyNumber[tt] = np.unique(survNum)[0]
+
+    # go ahead and return my dictionary
+    out = {}
+    out['elevation'] = elevation
+    out['smoothAL'] = smoothAL
+    out['xFRF'] = xFRFi_vec
+    out['yFRF'] = yFRFi_vec
+
+    if grid:
+        pass
+    else:
+        out['surveyNumber'] = surveyNumber
+    return out
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
