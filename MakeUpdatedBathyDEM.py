@@ -1867,6 +1867,75 @@ def subgridBounds2(surveyDict, gridDict, xMax=1290, maxSpace=149, surveyFilter=F
 
 
 def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
+    """
+
+    :param backgroundDict: keys are:
+                        elevation - 2D matrix containing the elevations at every node for
+                                    whatever my background is supposed to be for this run
+                        xFRF - 1D array of xFRF positions corresponding to the second dimension of elevation
+                        yFRF - 1D array of yFRF positions corresponding to the first dimension of elevation
+    :param newDict: keys are:
+                        elevation - this will probably either be a 1D array of elevations from a survey or a 3D array of
+                                    elevations where the first dimension is time and the next two are y and X, respectively.
+                                    If it gets a 2D array it assumes it is a gridded bathymetry with only one time.
+                        xFRF - this will either be a 1D array of x-values corresponding to the points of the survey,
+                               a 1D array corresponding to the x dimension of elevation, or a 2D array that is a
+                               meshgrid of the x-values corresponding to the elevations.
+                               The script should be smart enough to tell which type of 1D array it is.
+                        yFRF - this will either be a 1D array of y-values corresponding to the points of the survey,
+                               a 1D array corresponding to the y dimension of elevation, or a 2D array that is a
+                               meshgrid of the y-values corresponding to the elevations.
+                               The script should be smart enough to tell which type of 1D array it is.
+                        surveyNumber - these are the survey numbers of every point in the survey
+                                       (so one for every point in elevation if elevation comes from survey data).
+                                       This is not required if the new data is gridded
+                        profileNumber - these are the profile numbers of every point in the survey
+                                       (so one for every point in elevation if elevation comes from survey data).
+                                       This is not required if the new data is gridded
+    :param scalecDict: keys are:
+                        x_smooth - x direction smoothing length for scalecInterp
+                        y_smooth - y direction smoothing length for scalecInterp
+
+                        if not specified it will default to:
+                        x_smooth = 100
+                        y_smooth = 200
+    :param splineDict: keys are:
+                        splinebctype
+                            options are....
+                            2 - second derivative goes to zero at boundary
+                            1 - first derivative goes to zero at boundary
+                            0 - value is zero at boundary
+                            10 - force value and derivative(first?!?) to zero at boundary
+                        lc - spline smoothing constraint value (integer <= 1)
+                        dxm -  coarsening of the grid for spline (e.g., 2 means calculate with a dx that is 2x input dx)
+                                can be tuple if you want to do dx and dy separately (dxm, dym), otherwise dxm is used for both
+                        dxi - fining of the grid for spline (e.g., 0.1 means return spline on a grid that is 10x input dx)
+                                as with dxm, can be a tuple if you want separate values for dxi and dyi
+                        targetvar - this is the target variance used in the spline function.
+                        wbysmooth - y-edge smoothing length scale
+                        wbxsmooth - x-edge smoothing length scale
+
+                        if not specified it will default to:
+                        splinebctype = 10
+                        lc = 4
+                        dxm = 2
+                        dxi = 1
+                        targetvar = 0.45
+                        wbysmooth = 300
+                        wbxsmooth = 100
+    :return:
+            out:
+            keys are:
+            elevation: will always be a 3D array, first dim either corresponds to each survey number
+                       or the first dimension of the input elevation data and the second
+                       two dimensions the same size as backgroundDict['evelation']
+            smoothAL: 1D array corresponding to the smoothing scale used for each grid
+                      (they will all be identical if using gridded data because there is no mechanism to change it)
+            xFRF:   exact same as backgroundDict['xFRF']
+            yFRF:   exact same as backgroundDict['xFRF']
+            surveyNumber: 1D array corresponding to the survey numbers for each grid.
+                          This will not exist if the input data was a grid
+    """
 
 
     # check scalecDict and splineDict
@@ -1938,9 +2007,21 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
         if grid:
 
             # get my stuff out
-            xV = newX
-            yV = newY
-            zV = newZ[tt]
+            if newZ.ndim <= 2:
+                # this would mean you only handed it a 2D matrix containing ONE cbathy!!!!!!!!!!
+                zV = newZ
+            else:
+                zV = newZ[tt, :, :]
+
+            # were you handed a 2D array of X's and Y's or a 1D vector corresponding to that dimension?
+            if np.size(zV) == np.size(newX):
+                # must have been handed a meshgrid
+                xV = newX
+                yV = newY
+            else:
+                # just a 1D array, turn it into a meshgrid
+                xV, yV = np.meshgrid(newX, newY)
+
 
             # what are my subgrid bounds?
             x0 = np.max(xV)
