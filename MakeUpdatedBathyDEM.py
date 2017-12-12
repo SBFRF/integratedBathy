@@ -45,6 +45,8 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                         dxi - fining of the grid for spline (e.g., 0.1 means return spline on a grid that is 10x input dx)
                                 as with dxm, can be a tuple if you want separate values for dxi and dyi
                         targetvar - this is the target variance used in the spline function.
+                        wbysmooth - y-edge smoothing length scale
+                        wbxsmooth - x-edge smoothing length scale
 
                         if not specified it will default to:
                         splinebctype = 10
@@ -52,6 +54,8 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                         dxm = 2
                         dxi = 1
                         targetvar = 0.45
+                        wbysmooth = 300
+                        wbxsmooth = 100
 
     :param plot: toggle for turning plot on or off.  Anything besides None will cause it to plot
 
@@ -357,6 +361,15 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
 
                 max_spacing = temp['max_spacing']
 
+                # if the max spacing is too high, bump up the smoothing!!
+                y_smooth_u = y_smooth  # reset y_smooth if I changed it during last step
+                if max_spacing is None:
+                    pass
+                elif 2 * max_spacing > y_smooth:
+                    y_smooth_u = int(dy * round(float(2 * max_spacing) / dy))
+                else:
+                    pass
+
                 del temp
 
                 # if you wound up throwing out this survey!!!
@@ -364,16 +377,6 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                     newZi = Zi
 
                 else:
-
-                    # if the max spacing is too high, bump up the smoothing!!
-                    y_smooth_u = y_smooth  # reset y_smooth if I changed it during last step
-                    if max_spacing is None:
-                        pass
-                    elif 2 * max_spacing > y_smooth:
-                        y_smooth_u = int(dy * round(float(2 * max_spacing) / dy))
-                    else:
-                        pass
-
 
                     print np.unique(survNum)
                     dict = {'x0': x0,  # gp.FRFcoord(x0, y0)['Lon'],  # -75.47218285,
@@ -1016,6 +1019,9 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, sp
                         dxi - fining of the grid for spline (e.g., 0.1 means return spline on a grid that is 10x input dx)
                                 as with dxm, can be a tuple if you want separate values for dxi and dyi
                         targetvar - this is the target variance used in the spline function.
+                        wbysmooth - y-edge smoothing length scale
+                        wbxsmooth - x-edge smoothing length scale
+
                         if not specified it will default to:
                         splinebctype = 10
                         lc = 4
@@ -1044,7 +1050,7 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, sp
     # background_url = 'http://134.164.129.62:8080/thredds/dodsC/CMTB/grids/UpdatedBackgroundDEM/UpdatedBackgroundDEM.ncml'
     # this is just the location of the ncml for the already created UpdatedDEM
 
-    nc_b_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles_gridded'
+    nc_b_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles_CBATHY'
     nc_b_name = 'backgroundDEMt0_TimeMean.nc'
     # these together are the location of the standard background bathymetry that we started from.
 
@@ -1071,14 +1077,17 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, sp
         dxm = 2
         dxi = 1
         targetvar = 0.45
-        off = 10
+        wbysmooth = 300  # y-edge smoothing scale
+        wbxsmooth = 100  # x-edge smoothing scale
     else:
         splinebctype = splineDict['splinebctype']
         lc = splineDict['lc']
         dxm = splineDict['dxm']
         dxi = splineDict['dxi']
         targetvar = splineDict['targetvar']
-        off = splineDict['off']
+        wbysmooth = splineDict['wbysmooth']
+        wbxsmooth = splineDict['wbxsmooth']
+
 
     # force the survey to start at the first of the month and end at the last of the month!!!!
     dSTR_s = dSTR_s[0:7] + '-01T00:00:00Z'
@@ -1354,15 +1363,21 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, sp
 
                 # this is the spline weights that you get from the scale C routine
                 # It also incorporates a target variance to bound the weights
+                MSEn = np.power(MSEn, 2)
                 wb = 1 - np.divide(MSEn, targetvar + MSEn)
 
-                # do my edge spline.  if you do Meg's spline afterwards set lc=None!
-                # (otherwise it will run its own bspline over the whole thing!!!)
-                newZdiff = DLY_bspline(Zdiff, splinebctype=splinebctype, off=off, lc=None)
-                # this is Meg's spline of the whole thing
-                newZdiff2 = bspline_pertgrid(newZdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
-                # add back the new difference to get your new subgrid bathymetry
-                newZn = Zi_s + newZdiff2
+                # do my edge spline weight stuff
+                wb_dict = {'x_grid': xFRFn,
+                           'y_grid': yFRFn,
+                           'ax': wbxsmooth / float(max(xFRFn_vec)),
+                           'ay': wbysmooth / float(max(yFRFn_vec)),
+                           }
+
+                wb_spline = makeWBflow2D(wb_dict)
+                wb = np.multiply(wb, wb_spline)
+
+                newZdiff = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
+                newZn = Zi_s + newZdiff
 
                 # get my new pretty splined grid
                 newZi = Zi.copy()
@@ -1849,6 +1864,338 @@ def subgridBounds2(surveyDict, gridDict, xMax=1290, maxSpace=149, surveyFilter=F
 
 
     return out
+
+
+def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
+
+
+    # check scalecDict and splineDict
+    if scalecDict is None:
+        x_smooth = 100  # scale c interp x-direction smoothing
+        y_smooth = 200  # scale c interp y-direction smoothing
+    else:
+        x_smooth = scalecDict['x_smooth']  # scale c interp x-direction smoothing
+        y_smooth = scalecDict['y_smooth']  # scale c interp y-direction smoothing
+
+    if splineDict is None:
+        splinebctype = 10
+        lc = 4
+        dxm = 2
+        dxi = 1
+        targetvar = 0.45
+        wbysmooth = 300  # y-edge smoothing scale
+        wbxsmooth = 100  # x-edge smoothing scale
+    else:
+        splinebctype = splineDict['splinebctype']
+        lc = splineDict['lc']
+        dxm = splineDict['dxm']
+        dxi = splineDict['dxi']
+        targetvar = splineDict['targetvar']
+        wbysmooth = splineDict['wbysmooth']
+        wbxsmooth = splineDict['wbxsmooth']
+
+
+    # load my background grid information
+    Zi = backgroundDict['elevation']
+    xFRFi_vec = backgroundDict['xFRF']
+    yFRFi_vec = backgroundDict['yFRF']
+    # read out the dx and dy of the background grid!!!
+    # assume this is constant grid spacing!!!!!
+    dx = abs(xFRFi_vec[1] - xFRFi_vec[0])
+    dy = abs(yFRFi_vec[1] - yFRFi_vec[0])
+    xFRFi, yFRFi = np.meshgrid(xFRFi_vec, yFRFi_vec)
+    rows, cols = np.shape(xFRFi)
+
+    # pull some stuff from my new data and check the dimension size
+    newX = np.array(newDict['xFRF'])
+    newY = np.array(newDict['yFRF'])
+    newZ = np.array(newDict['elevation'])
+
+    # check number of dimensions of dataZ
+    if newZ.ndim <= 1:
+        # this is survey data
+        grid = 0
+        survNum = newDict['surveyNumber']
+        surveyList = np.unique(survNum)
+        profNum = newDict['profileNumber']
+        num_iter = len(surveyList)
+    else:
+        grid = 1
+        num_iter = np.shape(newZ)[0]
+
+    # show time
+
+    # pre-allocate my netCDF dictionary variables here....
+    elevation = np.zeros((num_iter, rows, cols))
+    smoothAL = np.zeros(num_iter)
+    if grid:
+        pass
+    else:
+        surveyNumber = np.zeros(num_iter)
+
+    for tt in range(0, num_iter):
+
+        if grid:
+
+            # get my stuff out
+            xV = newX
+            yV = newY
+            zV = newZ[tt]
+
+            # what are my subgrid bounds?
+            x0 = np.max(xV)
+            y0 = np.max(yV)
+            x1 = np.min(xV)
+            y1 = np.min(yV)
+
+            # round it to nearest dx or dy
+            # minX
+            if x1 >= 0:
+                x1 = x1 - (x1 % dx)
+            else:
+                x1 = x1 - (x1 % dx) + dx
+
+            # maxX
+            if x0 >= 0:
+                x0 = x0 - (x0 % dx)
+            else:
+                x0 = x0 - (x0 % dx) + dx
+
+            # minY
+            if y1 >= 0:
+                y1 = y1 - (y1 % dy)
+            else:
+                y1 = y1 - (y1 % dy) + dy
+
+            # maxY
+            if y0 >= 0:
+                y0 = y0 - (y0 % dy)
+            else:
+                y0 = y0 - (y0 % dy) + dy
+
+            # make sure they are inside the bounds of my bigger grid
+            # if so, truncate so that it does not exceed.
+            if x0 > max(xFRFi_vec):
+                x0 = max(xFRFi_vec)
+            else:
+                pass
+            if x1 < min(xFRFi_vec):
+                x1 = min(xFRFi_vec)
+            else:
+                pass
+            if y0 > max(yFRFi_vec):
+                y0 = max(yFRFi_vec)
+            else:
+                pass
+            if y1 < min(yFRFi_vec):
+                y1 = min(yFRFi_vec)
+            else:
+                pass
+
+            #reshape it to pass to DEM generator
+            dataX, dataY, dataZ = [], [], []
+            dataX = np.reshape(xV, (np.shape(xV)[0] * np.shape(xV)[1], 1)).flatten()
+            dataY = np.reshape(yV, (np.shape(yV)[0] * np.shape(yV)[1], 1)).flatten()
+            dataZ = np.reshape(zV, (np.shape(zV)[0] * np.shape(zV)[1], 1)).flatten()
+
+            # specify y_smoothing
+            y_smooth_u = y_smooth
+
+        else:
+
+            # get the times of each survey
+            ids = (survNum == surveyList[tt])
+
+            # pull out this stuf!!!!!!!!
+            dataX, dataY, dataZ = [], [], []
+            dataX = newX[ids]
+            dataY = newY[ids]
+            dataZ = newZ[ids]
+
+            # what are my subgrid bounds?
+            surveyDict = {}
+            surveyDict['dataX'] = dataX
+            surveyDict['dataY'] = dataY
+            surveyDict['profNum'] = profNum[ids]
+
+            gridDict = {}
+            gridDict['dx'] = dx
+            gridDict['dy'] = dy
+            gridDict['xFRFi_vec'] = xFRFi_vec
+            gridDict['yFRFi_vec'] = yFRFi_vec
+
+            # temp = subgridBounds(surveyDict, gridDict, maxSpace=249)
+            maxSpace = 249
+            surveyFilter = True
+            temp = subgridBounds2(surveyDict, gridDict, maxSpace=maxSpace, surveyFilter=surveyFilter)
+
+            x0 = temp['x0']
+            x1 = temp['x1']
+            y0 = temp['y0']
+            y1 = temp['y1']
+
+            if surveyFilter is True:
+                xS0 = temp['xS0']
+                xS1 = temp['xS1']
+                yS0 = temp['yS0']
+                yS1 = temp['yS1']
+                # throw out all points in the survey that are outside of these bounds!!!!
+                test1 = np.where(dataX <= xS0, 1, 0)
+                test2 = np.where(dataX >= xS1, 1, 0)
+                test3 = np.where(dataY <= yS0, 1, 0)
+                test4 = np.where(dataY >= yS1, 1, 0)
+                test_sum = test1 + test2 + test3 + test4
+                dataXn = dataX[test_sum >= 4]
+                dataYn = dataY[test_sum >= 4]
+                dataZn = dataZ[test_sum >= 4]
+                del dataX
+                del dataY
+                del dataZ
+                dataX = dataXn
+                dataY = dataYn
+                dataZ = dataZn
+                del dataXn
+                del dataYn
+                del dataZn
+            else:
+                pass
+
+            max_spacing = temp['max_spacing']
+
+            # if the max spacing is too high, bump up the smoothing!!
+            y_smooth_u = y_smooth  # reset y_smooth if I changed it during last step
+            if max_spacing is None:
+                pass
+            elif 2 * max_spacing > y_smooth:
+                y_smooth_u = int(dy * round(float(2 * max_spacing) / dy))
+            else:
+                pass
+
+            del temp
+
+        # ok, now it should be on to DEM generator at this point?
+        # I think the only difference after this will be if I return the survey number or not?
+        # if you wound up throwing out this survey!!!
+        if x0 is None:
+            newZi = Zi
+
+        else:
+
+            print np.unique(survNum)
+            dict = {'x0': x0,  # gp.FRFcoord(x0, y0)['Lon'],  # -75.47218285,
+                    'y0': y0,  # gp.FRFcoord(x0, y0)['Lat'],  #  36.17560399,
+                    'x1': x1,  # gp.FRFcoord(x1, y1)['Lon'],  # -75.75004989,
+                    'y1': y1,  # gp.FRFcoord(x1, y1)['Lat'],  #  36.19666112,
+                    'lambdaX': dx,
+                    # grid spacing in x  -  Here is where CMS would hand array of variable grid spacing
+                    'lambdaY': dy,  # grid spacing in y
+                    'msmoothx': x_smooth,  # smoothing length scale in x
+                    'msmoothy': y_smooth_u,  # smoothing length scale in y
+                    'msmootht': 1,  # smoothing length scale in Time
+                    'filterName': 'hanning',
+                    # 'nmseitol': 0.75, # why did Spicer use 0.75?  Meg uses 0.25
+                    'nmseitol': 0.25,
+                    'grid_coord_check': 'FRF',
+                    'grid_filename': '',  # should be none if creating background Grid!  becomes best guess grid
+                    'data_coord_check': 'FRF',
+                    'xFRF_s': dataX,
+                    'yFRF_s': dataY,
+                    'Z_s': dataZ,
+                    'xFRFi_vec': xFRFi_vec,  # x-positions from the full background bathy
+                    'yFRFi_vec': yFRFi_vec,  # y-positions from the full background bathy
+                    'Zi': Zi,  # full background bathymetry elevations
+                    }
+
+            out = DEM_generator(dict)
+
+            # read some stuff from this dict like a boss
+            Zn = out['Zi']
+            MSEn = out['MSEi']
+            MSRn = out['MSRi']
+            NMSEn = out['NMSEi']
+            xFRFn_vec = out['x_out']
+            yFRFn_vec = out['y_out']
+
+            # make my the mesh for the new subgrid
+            xFRFn, yFRFn = np.meshgrid(xFRFn_vec, yFRFn_vec)
+
+            # where does this subgrid fit in my larger background grid?
+            x1 = np.where(xFRFi_vec == min(xFRFn_vec))[0][0]
+            x2 = np.where(xFRFi_vec == max(xFRFn_vec))[0][0]
+            y1 = np.where(yFRFi_vec == min(yFRFn_vec))[0][0]
+            y2 = np.where(yFRFi_vec == max(yFRFn_vec))[0][0]
+
+            Zi_s = Zi[y1:y2 + 1, x1:x2 + 1]
+
+            # get the difference!!!!
+            Zdiff = Zn - Zi_s
+
+            # spline time?
+            MSEn = np.power(MSEn, 2)
+            wb = 1 - np.divide(MSEn, targetvar + MSEn)
+
+            wb_dict = {'x_grid': xFRFn,
+                       'y_grid': yFRFn,
+                       'ax': wbxsmooth / float(max(xFRFn_vec)),
+                       'ay': wbysmooth / float(max(yFRFn_vec)),
+                       }
+
+            wb_spline = makeWBflow2D(wb_dict)
+            wb = np.multiply(wb, wb_spline)
+
+            newZdiff = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
+            newZn = Zi_s + newZdiff
+
+            # get my new pretty splined grid
+            newZi = Zi.copy()
+            newZi[y1:y2 + 1, x1:x2 + 1] = newZn
+
+
+        # update Zi for next iteration
+        del Zi
+        Zi = newZi
+
+        # go ahead and stack this stuff in my new variables I am building
+        elevation[tt, :, :] = newZi
+        smoothAL[tt] = y_smooth_u
+        if grid:
+            pass
+        else:
+            surveyNumber[tt] = np.unique(survNum)[0]
+
+    # go ahead and return my dictionary
+    out = {}
+    out['elevation'] = elevation
+    out['smoothAL'] = smoothAL
+    out['xFRF'] = xFRFi_vec
+    out['yFRF'] = yFRFi_vec
+
+    if grid:
+        pass
+    else:
+        out['surveyNumber'] = surveyNumber
+    return out
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
