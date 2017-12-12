@@ -99,8 +99,8 @@ targetvar = 0.8 # this is the target variance used in the spline function.
 wbysmooth = 300
 wbxsmooth = 100
 # It is used in conjunction with the MSE from splineCinterp to compute the spline weights (wb)
-dSTR_s = '2008-01-01T00:00:00Z'
-dSTR_e = '2017-07-01T00:00:00Z'
+dSTR_s = '2015-10-01T00:00:00Z'
+dSTR_e = '2015-11-01T00:00:00Z'
 
 # dir_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles_gridded'
 dir_loc = '/home/number/Desktop/DavidTestNC'

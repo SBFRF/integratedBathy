@@ -7,7 +7,7 @@ import makenc
 from matplotlib import pyplot as plt
 from bsplineFunctions import bspline_pertgrid, DLY_bspline
 import datetime as DT
-from scalecInterp_python.DEM_generator import DEM_generator
+from scaleCinterp_python.DEM_generator import DEM_generator, makeWBflow2D
 import pandas as pd
 from getdatatestbed import getDataFRF
 
@@ -75,21 +75,21 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
     filelist = ['http://134.164.129.55/thredds/dodsC/FRF/geomorphology/elevationTransects/survey/surveyTransects.ncml']
     # this is just the location of the ncml for the transects!!!!!
 
-    # nc_url = 'http://134.164.129.62:8080/thredds/dodsC/CMTB/grids/UpdatedBackgroundDEM/UpdatedBackgroundDEM.ncml'
-    # this is just the location of the ncml for the already created UpdatedDEM
+    nc_url = 'http://134.164.129.55/thredds/dodsC/cmtb/integratedBathyProduct/survey/survey.ncml'
+    # this is just the location of the ncml for the already created integrated bathy product
 
-    nc_b_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles_WA'
+    nc_b_loc = 'http://134.164.129.55/thredds/dodsC/cmtb/grids/TimeMeanBackgroundDEM'
     nc_b_name = 'backgroundDEMt0_TimeMean.nc'
     # these together are the location of the standard background bathymetry that we started from.
 
     # Yaml files for my .nc files!!!!!
-    global_yaml = 'C:\Users\dyoung8\PycharmProjects\makebathyinterp\yamls\BATHY\FRFti_global.yml'
-    var_yaml = 'C:\Users\dyoung8\PycharmProjects\makebathyinterp\yamls\BATHY\FRFti_var.yml'
+    global_yaml = '/home/number/repos/makebathyinterp/yamls/BATHY/FRFti_global.yml'
+    var_yaml = '/home/number/repos/makebathyinterp/yamls/BATHY/FRFti_var.yml'
 
     # CS-array url - I just use this to get the position, not for any data
     cs_array_url = 'http://134.164.129.55/thredds/dodsC/FRF/oceanography/waves/8m-array/2017/FRF-ocean_waves_8m-array_201707.nc'
     # where do I want to save any QA/QC figures
-    fig_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\Test Figures\QAQCfigs_transects_off20'
+    fig_loc = 'figures/'
 
 
     #check scalecDict and splineDict
@@ -835,12 +835,17 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, sp
                         dxi - fining of the grid for spline (e.g., 0.1 means return spline on a grid that is 10x input dx)
                                 as with dxm, can be a tuple if you want separate values for dxi and dyi
                         targetvar - this is the target variance used in the spline function.
+                        wbysmooth - y-edge smoothing length scale
+                        wbxsmooth - x-edge smoothing length scale
+
                         if not specified it will default to:
                         splinebctype = 10
                         lc = 4
                         dxm = 2
                         dxi = 1
                         targetvar = 0.45
+                        wbysmooth = 300
+                        wbxsmooth = 100
 
     :param plot: toggle for turning plot on or off.  Anything besides None will cause it to plot
 
@@ -890,14 +895,16 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, sp
         dxm = 2
         dxi = 1
         targetvar = 0.45
-        off = 10
+        wbysmooth = 300
+        wbxsmooth = 100
     else:
         splinebctype = splineDict['splinebctype']
         lc = splineDict['lc']
         dxm = splineDict['dxm']
         dxi = splineDict['dxi']
         targetvar = splineDict['targetvar']
-        off = splineDict['off']
+        wbxsmooth = splineDict['wbxsmooth']
+        wbysmooth = splineDict['wbysmooth']
 
     # force the survey to start at the first of the month and end at the last of the month!!!!
     dSTR_s = dSTR_s[0:7] + '-01T00:00:00Z'
@@ -1173,15 +1180,25 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, sp
 
                 # this is the spline weights that you get from the scale C routine
                 # It also incorporates a target variance to bound the weights
+                MSEn = np.power(MSEn, 2)
                 wb = 1 - np.divide(MSEn, targetvar + MSEn)
 
-                # do my edge spline.  if you do Meg's spline afterwards set lc=None!
-                # (otherwise it will run its own bspline over the whole thing!!!)
-                newZdiff = DLY_bspline(Zdiff, splinebctype=splinebctype, off=off, lc=None)
-                # this is Meg's spline of the whole thing
-                newZdiff2 = bspline_pertgrid(newZdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
-                # add back the new difference to get your new subgrid bathymetry
-                newZn = Zi_s + newZdiff2
+                # do my edge spline weight stuff
+                wb_dict = {'x_grid': xFRFn,
+                           'y_grid': yFRFn,
+                           'ax': wbxsmooth / float(max(xFRFn_vec)),
+                           'ay': wbysmooth / float(max(yFRFn_vec)),
+                           }
+
+                wb_spline = makeWBflow2D(wb_dict)
+                wb = np.multiply(wb, wb_spline)
+
+                # do the spline like a boss
+                newZdiff = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
+                newZn = Zi_s + newZdiff
+
+                # get my new pretty splined grid
+                newZi = Zi.copy()
 
                 # get my new pretty splined grid
                 newZi = Zi.copy()
@@ -1313,6 +1330,7 @@ def getGridded(ncml_url, d1, d2):
         frf_data = getDataFRF.getObs(d1, d2)
         temp = frf_data.getBathyGridcBathy(xbound=[0, 500], ybound=[0, 1000])
         # DLY note - this function is doing something funny and I have not figured out why yet.
+
         t = 1
 
 
