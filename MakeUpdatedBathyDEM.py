@@ -80,8 +80,8 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
     filelist = ['http://134.164.129.55/thredds/dodsC/FRF/geomorphology/elevationTransects/survey/surveyTransects.ncml']
     # this is just the location of the ncml for the transects!!!!!
 
-    nc_url = 'http://134.164.129.55/thredds/dodsC/cmtb/integratedBathyProduct/survey/survey.ncml'
-    # this is just the location of the ncml for the already created integrated bathy product
+    # nc_url = 'http://134.164.129.62:8080/thredds/dodsC/CMTB/grids/UpdatedBackgroundDEM/UpdatedBackgroundDEM.ncml'
+    # this is just the location of the ncml for the already created UpdatedDEM
 
     # these together are the location of the standard background bathymetry that we started from.
     nc_b_url = 'http://134.164.129.55/thredds/dodsC/cmtb/grids/TimeMeanBackgroundDEM/backgroundDEMt0_TimeMean.nc'
@@ -89,13 +89,13 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
     # pull the background from the THREDDS
 
     # Yaml files for my .nc files!!!!!
-    global_yaml = '/home/number/repos/makebathyinterp/yamls/BATHY/FRFti_global.yml'
-    var_yaml = '/home/number/repos/makebathyinterp/yamls/BATHY/FRFti_var.yml'
+    global_yaml = 'C:\Users\dyoung8\PycharmProjects\makebathyinterp\yamls\BATHY\FRFti_global.yml'
+    var_yaml = 'C:\Users\dyoung8\PycharmProjects\makebathyinterp\yamls\BATHY\FRFti_var.yml'
 
     # CS-array url - I just use this to get the position, not for any data
     cs_array_url = 'http://134.164.129.55/thredds/dodsC/FRF/oceanography/waves/8m-array/2017/FRF-ocean_waves_8m-array_201707.nc'
     # where do I want to save any QA/QC figures
-    fig_loc = 'figures/'
+    fig_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\Test Figures\QAQCfigs_transects_off20'
 
 
     #check scalecDict and splineDict
@@ -1028,8 +1028,6 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, sp
                         dxm = 2
                         dxi = 1
                         targetvar = 0.45
-                        wbysmooth = 300
-                        wbxsmooth = 100
 
     :param plot: toggle for turning plot on or off.  Anything besides None will cause it to plot
 
@@ -1079,7 +1077,6 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, sp
         dxm = 2
         dxi = 1
         targetvar = 0.45
-
         wbysmooth = 300  # y-edge smoothing scale
         wbxsmooth = 100  # x-edge smoothing scale
     else:
@@ -1088,8 +1085,8 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, sp
         dxm = splineDict['dxm']
         dxi = splineDict['dxi']
         targetvar = splineDict['targetvar']
-        wbxsmooth = splineDict['wbxsmooth']
         wbysmooth = splineDict['wbysmooth']
+        wbxsmooth = splineDict['wbxsmooth']
 
 
     # force the survey to start at the first of the month and end at the last of the month!!!!
@@ -1512,7 +1509,6 @@ def getGridded(ncml_url, d1, d2):
         frf_data = getDataFRF.getObs(d1, d2)
         temp = frf_data.getBathyGridcBathy(xbound=[0, 500], ybound=[0, 1000])
         # DLY note - this function is doing something funny and I have not figured out why yet.
-
         t = 1
 
 
@@ -1998,9 +1994,14 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
 
     # show time
 
+
     # pre-allocate my netCDF dictionary variables here....
-    elevation = np.zeros((num_iter, rows, cols))
-    smoothAL = np.zeros(num_iter)
+    elevation = np.empty((num_iter, rows, cols))
+    smoothAL = np.empty(num_iter)
+    elevation[:] = np.nan
+    smoothAL[:] = np.nan
+
+
     if grid:
         pass
     else:
@@ -2114,16 +2115,104 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
             surveyFilter = True
             temp = subgridBounds2(surveyDict, gridDict, maxSpace=maxSpace, surveyFilter=surveyFilter)
 
+            if temp['x0'] is None:
+                print 'Survey %s was not included because there were too few profile lines spaced too far apart.' % str(surveyList[tt])
+                continue
+            else:
+                pass
+
             x0 = temp['x0']
             x1 = temp['x1']
             y0 = temp['y0']
             y1 = temp['y1']
+            xS0 = temp['xS0']
+            xS1 = temp['xS1']
+            yS0 = temp['yS0']
+            yS1 = temp['yS1']
+
+            # here is where we are going to modify the edge spline stuff AND the
+            # lc for the bspline if we are starting from the background DEM
+            mod_num = 2
+            tmBackTog = False
+            if ('tmBackTog' in backgroundDict.keys()) & (tt < mod_num):
+
+                tmBackTog = True
+
+                # what do I want to fiddle with?
+                gridInc = 100
+                lcInc = 2
+                wbSmoothInc = 2
+
+                # 1 - push out bounds
+                x0 = x0 + gridInc * (mod_num - tt)
+                x1 = x1 - 0.1* gridInc * (mod_num - tt) # this one is special!  we DONT want to get too high up on the dune...
+                y0 = y0 + gridInc * (mod_num - tt)
+                y1 = y1 + gridInc * (mod_num - tt)
+                # and make sure we didn't go over...
+                # if so, truncate so that it does not exceed.
+                if x0 > max(xFRFi_vec):
+                    x0 = max(xFRFi_vec)
+                else:
+                    pass
+                if x1 < min(xFRFi_vec):
+                    x1 = min(xFRFi_vec)
+                else:
+                    pass
+                if y0 > max(yFRFi_vec):
+                    y0 = max(yFRFi_vec)
+                else:
+                    pass
+                if y1 < min(yFRFi_vec):
+                    y1 = min(yFRFi_vec)
+                else:
+                    pass
+                # round it to nearest dx or dy
+                # minX
+                if x1 >= 0:
+                    x1 = x1 - (x1 % dx)
+                else:
+                    x1 = x1 - (x1 % dx) + dx
+                # maxX
+                if x0 >= 0:
+                    x0 = x0 - (x0 % dx)
+                else:
+                    x0 = x0 - (x0 % dx) + dx
+                # minY
+                if y0 >= 0:
+                    y0 = y0 - (y0 % dy)
+                else:
+                    y0 = y0 - (y0 % dy) + dy
+                # maxY
+                if y1 >= 0:
+                    y1 = y1 - (y1 % dy)
+                else:
+                    y1 = y1 - (y1 % dy) + dy
+
+                # 2 - bump up the edge spline?
+                wbysmooth = wbysmooth * wbSmoothInc * (mod_num - tt)
+                wbxsmooth = wbxsmooth * wbSmoothInc * (mod_num - tt)
+                # round to nearest 10
+                # wbxsmooth
+                if wbxsmooth >= 0:
+                    wbxsmooth = wbxsmooth - (wbxsmooth % 10)
+                else:
+                    wbxsmooth = wbxsmooth - (wbxsmooth % 10) + 10
+                # wbysmooth
+                if wbysmooth >= 0:
+                    wbysmooth = wbysmooth - (wbysmooth % 10)
+                else:
+                    wbysmooth = wbysmooth - (wbysmooth % 10) + 10
+
+                # 3 - bump up lc
+                lc = lc * lcInc * (mod_num - tt)
+                # round to nearest 2
+                if lc >= 0:
+                    lc = lc - (lc % 2)
+                else:
+                    lc = lc - (lc % 2) + 2
+
 
             if surveyFilter is True:
-                xS0 = temp['xS0']
-                xS1 = temp['xS1']
-                yS0 = temp['yS0']
-                yS1 = temp['yS1']
                 # throw out all points in the survey that are outside of these bounds!!!!
                 test1 = np.where(dataX <= xS0, 1, 0)
                 test2 = np.where(dataX >= xS1, 1, 0)
@@ -2166,7 +2255,6 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
 
         else:
 
-            print np.unique(survNum)
             dict = {'x0': x0,  # gp.FRFcoord(x0, y0)['Lon'],  # -75.47218285,
                     'y0': y0,  # gp.FRFcoord(x0, y0)['Lat'],  #  36.17560399,
                     'x1': x1,  # gp.FRFcoord(x1, y1)['Lon'],  # -75.75004989,
@@ -2215,6 +2303,46 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
             # get the difference!!!!
             Zdiff = Zn - Zi_s
 
+
+            # this is where I am going to decide if I need to bump up the edge stuff
+            # what is the max of Zdiff
+            test = np.max(np.abs(Zdiff))
+            t = 1
+            """
+            # this conditional checks to see if I ALREADY changed the spline due to it being the first two surveys
+            # implemented, then checks the maximum allowable zdiff
+            maZdiff = 1  # maximum allowable Zdiff?
+            if (not tmBackTog) & (np.max(np.abs(Zdiff)) >= maZdiff):
+
+                # what do I want to fiddle with?
+                lcInc = 4
+                wbSmoothInc = 4
+
+                # 1 - bump up the edge spline?
+                wbysmooth = wbysmooth * wbSmoothInc
+                wbxsmooth = wbxsmooth * wbSmoothInc
+                # round to nearest 10
+                # wbxsmooth
+                if wbxsmooth >= 0:
+                    wbxsmooth = wbxsmooth - (wbxsmooth % 10)
+                else:
+                    wbxsmooth = wbxsmooth - (wbxsmooth % 10) + 10
+                # wbysmooth
+                if wbysmooth >= 0:
+                    wbysmooth = wbysmooth - (wbysmooth % 10)
+                else:
+                    wbysmooth = wbysmooth - (wbysmooth % 10) + 10
+
+                # 2 - bump up lc
+                lc = lc * lcInc
+                # round to nearest 2
+                if lc >= 0:
+                    lc = lc - (lc % 2)
+                else:
+                    lc = lc - (lc % 2) + 2
+            """
+
+
             # spline time?
             MSEn = np.power(MSEn, 2)
             wb = 1 - np.divide(MSEn, targetvar + MSEn)
@@ -2240,6 +2368,18 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
         del Zi
         Zi = newZi
 
+        # make sure these reset to the original values
+        if splineDict is None:
+            lc = 4
+            wbysmooth = 300  # y-edge smoothing scale
+            wbxsmooth = 100  # x-edge smoothing scale
+        else:
+            lc = splineDict['lc']
+            wbysmooth = splineDict['wbysmooth']
+            wbxsmooth = splineDict['wbxsmooth']
+
+
+
         # go ahead and stack this stuff in my new variables I am building
         elevation[tt, :, :] = newZi
         smoothAL[tt] = y_smooth_u
@@ -2260,6 +2400,228 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
     else:
         out['surveyNumber'] = surveyNumber
     return out
+
+
+def makeBATHYfromSurvey(d1, scalecDict=None, gridDict=None):
+
+    # check scalecDict
+    if scalecDict is None:
+        x_smooth = 100  # scale c interp x-direction smoothing
+        y_smooth = 200  # scale c interp y-direction smoothing
+    else:
+        x_smooth = scalecDict['x_smooth']  # scale c interp x-direction smoothing
+        y_smooth = scalecDict['y_smooth']  # scale c interp y-direction smoothing
+
+    #this is the ncml for the surveys!!!!
+    survey_ncml = 'http://134.164.129.55/thredds/dodsC/FRF/geomorphology/elevationTransects/survey/surveyTransects.ncml'
+
+    # ok, now to make my nc files, I just need to go through and find all surveys that fall in these months
+    bathy = nc.Dataset(survey_ncml)
+    # pull down all the times....
+    times = nc.num2date(bathy.variables['time'][:], bathy.variables['time'].units, bathy.variables['time'].calendar)
+    # and all the survey numbers
+    all_surveys = bathy.variables['surveyNumber'][:]
+    # find some stuff here...
+    mask = (times <= d1)  # boolean true/false of time
+    idx = np.where(mask)[0]
+    # what is the latest survey in this group?
+    survey_num = np.max(np.unique(bathy.variables['surveyNumber'][idx]))
+    # get the times of each survey
+    ids = (all_surveys == survey_num)
+
+    # pull out this NC stuf!!!!!!!!
+    dataX, dataY, dataZ = [], [], []
+    dataX = bathy['xFRF'][ids]
+    dataY = bathy['yFRF'][ids]
+    dataZ = bathy['elevation'][ids]
+    profNum = bathy['profileNumber'][ids]
+
+    # what are my subgrid bounds?
+    surveyDict = {}
+    surveyDict['dataX'] = dataX
+    surveyDict['dataY'] = dataY
+    surveyDict['profNum'] = profNum
+
+    if gridDict is None:
+        gridDict = {}
+        dx = 5
+        dy = 5
+        gridDict['dx'] = dx
+        gridDict['dy'] = dx
+        gridDict['xFRFi_vec'] = np.array(range(int(min(surveyDict['dataX'])), int(max(surveyDict['dataX']) + dx), int(dx)))
+        gridDict['yFRFi_vec'] = np.array(range(int(min(surveyDict['dataY'])), int(max(surveyDict['dataY']) + dy), int(dy)))
+    else:
+        pass
+
+    maxSpace = 249
+    surveyFilter = False
+    temp = subgridBounds2(surveyDict, gridDict, maxSpace=maxSpace, surveyFilter=surveyFilter)
+
+    x0 = temp['x0']
+    x1 = temp['x1']
+    y0 = temp['y0']
+    y1 = temp['y1']
+
+    if surveyFilter is True:
+        xS0 = temp['xS0']
+        xS1 = temp['xS1']
+        yS0 = temp['yS0']
+        yS1 = temp['yS1']
+        # throw out all points in the survey that are outside of these bounds!!!!
+        test1 = np.where(dataX <= xS0, 1, 0)
+        test2 = np.where(dataX >= xS1, 1, 0)
+        test3 = np.where(dataY <= yS0, 1, 0)
+        test4 = np.where(dataY >= yS1, 1, 0)
+        test_sum = test1 + test2 + test3 + test4
+        dataXn = dataX[test_sum >= 4]
+        dataYn = dataY[test_sum >= 4]
+        dataZn = dataZ[test_sum >= 4]
+        del dataX
+        del dataY
+        del dataZ
+        dataX = dataXn
+        dataY = dataYn
+        dataZ = dataZn
+        del dataXn
+        del dataYn
+        del dataZn
+    else:
+        pass
+
+    max_spacing = temp['max_spacing']
+
+    # if the max spacing is too high, bump up the smoothing!!
+    y_smooth_u = y_smooth  # reset y_smooth if I changed it during last step
+    if max_spacing is None:
+        pass
+    elif 2 * max_spacing > y_smooth:
+        y_smooth_u = int(dy * round(float(2 * max_spacing) / dy))
+    else:
+        pass
+
+    del temp
+
+    if x0 is None:
+        returnDict = {}
+
+    else:
+
+        dict = {'x0': x0,  # gp.FRFcoord(x0, y0)['Lon'],  # -75.47218285,
+                'y0': y0,  # gp.FRFcoord(x0, y0)['Lat'],  #  36.17560399,
+                'x1': x1,  # gp.FRFcoord(x1, y1)['Lon'],  # -75.75004989,
+                'y1': y1,  # gp.FRFcoord(x1, y1)['Lat'],  #  36.19666112,
+                'lambdaX': dx,
+                # grid spacing in x  -  Here is where CMS would hand array of variable grid spacing
+                'lambdaY': dy,  # grid spacing in y
+                'msmoothx': x_smooth,  # smoothing length scale in x
+                'msmoothy': y_smooth_u,  # smoothing length scale in y
+                'msmootht': 1,  # smoothing length scale in Time
+                'filterName': 'hanning',
+                # 'nmseitol': 0.75, # why did Spicer use 0.75?  Meg uses 0.25
+                'nmseitol': 0.25,
+                'grid_coord_check': 'FRF',
+                'grid_filename': '',  # should be none if creating background Grid!  becomes best guess grid
+                'data_coord_check': 'FRF',
+                'xFRF_s': dataX,
+                'yFRF_s': dataY,
+                'Z_s': dataZ,
+                }
+
+        out = DEM_generator(dict)
+
+        # read some stuff from this dict like a boss
+        returnDict = {}
+        returnDict['elevation'] = out['Zi']
+        returnDict['xFRF'] = out['x_out']
+        returnDict['yFRF'] = out['y_out']
+
+    return returnDict
+
+
+def getSurveyData(d1, d2):
+
+    # survey ncml file name
+    survey_ncml = 'http://134.164.129.55/thredds/dodsC/FRF/geomorphology/elevationTransects/survey/surveyTransects.ncml'
+
+    # get the survey data that I need
+    bathy = nc.Dataset(survey_ncml)
+    # pull down all the times....
+    times = nc.num2date(bathy.variables['time'][:], bathy.variables['time'].units, bathy.variables['time'].calendar)
+    all_surveys = bathy.variables['surveyNumber'][:]
+
+    # find some stuff here...
+    mask = (times >= d1) & (times < d2)  # boolean true/false of time
+    idx = np.where(mask)[0]
+    # what surveys are in this range?
+    surveys = np.unique(bathy.variables['surveyNumber'][idx])
+
+    # if there are no surveys here, then skip the rest of this loop...
+    if len(surveys) < 1:
+        print('No surveys found for ' + d1.strftime('%Y-%m-%dT%H:%M:%SZ') + ' to ' + d2.strftime('%Y-%m-%dT%H:%M:%SZ'))
+
+        # pack all this up and return to user
+        outDict = {}
+        outDict['elevation'] = None
+        outDict['xFRF'] = None
+        outDict['yFRF'] = None
+        outDict['profileNumber'] = None
+        outDict['surveyNumber'] = None
+        outDict['surveyTime'] = None
+
+    else:
+
+        # otherwise..., check to see the times of all the surveys...?
+        for tt in range(0, len(surveys)):
+            ids = (all_surveys == surveys[tt])
+            surv_times = times[ids]
+            # pull out the mean time
+            surv_timeM = surv_times[0] + (surv_times[-1] - surv_times[0]) / 2
+            # round it to nearest 12 hours.
+            surv_timeM = sb.roundtime(surv_timeM, roundTo=1 * 12 * 3600)
+            # if the rounded time IS in the month, great
+            if (surv_timeM >= d1) and (surv_timeM < d2):
+                pass
+            else:
+                # if not set it to a fill value
+                surveys[tt] == -1000
+        # drop all the surveys that we decided are not going to go into this monthly file!
+        surveys = surveys[surveys >= 0]
+
+        # what data do I need to include?
+        ids = np.zeros(np.shape(all_surveys), dtype=bool)
+        for tt in range(0, len(all_surveys)):
+            if all_surveys[tt] in surveys:
+                ids[tt] = True
+            else:
+                pass
+
+        # pull out this NC stuf!!!!!!!!
+        dataX, dataY, dataZ = [], [], []
+        dataX = bathy['xFRF'][ids]
+        dataY = bathy['yFRF'][ids]
+        dataZ = bathy['elevation'][ids]
+        profNum = bathy['profileNumber'][ids]
+        survNum = bathy['surveyNumber'][ids]
+        stimes = nc.num2date(bathy.variables['time'][ids], bathy.variables['time'].units, bathy.variables['time'].calendar)
+
+        # pack all this up and return to user
+        outDict = {}
+        outDict['elevation'] = dataZ
+        outDict['xFRF'] = dataX
+        outDict['yFRF'] = dataY
+        outDict['profileNumber'] = profNum
+        outDict['surveyNumber'] = survNum
+        outDict['surveyTime'] = stimes
+
+    return outDict
+
+
+
+
+
+
+
+
 
 
 
