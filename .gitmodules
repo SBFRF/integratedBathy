@@ -7,8 +7,8 @@
 	url = git@bitbucket.org:SBFRF/sblib.git
 [submodule "getdatatestbed"]
 	path = getdatatestbed
-	url = git@bitbucket.org:SBFRF/getdatatestbed
-[submodule "scalecInterp_python"]
-	path = scalecInterp_python
-	url = https://github.com/SBFRF/scalecInterp_python
-	branch = master
+	url = git@bitbucket.org:SBFRF/getdatatestbed.git
+
+[submodule "scaleCinterp_python"]
+	path = scaleCinterp_python
+	url = git@github.com:SBFRF/scaleCinterp_python.git

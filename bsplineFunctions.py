@@ -1,4 +1,7 @@
 import numpy as np
+from matplotlib import pyplot as plt
+import os
+from scipy import interpolate, signal
 # this is a Python conversion of Meg Palmsten's (NRL) splining functions used in her interpD3DFRFBackground.m script
 # DLY 7/18/2017
 
@@ -530,6 +533,182 @@ def bspline_curve(y, ym, am, dx, bctype, aci=None):
     out['e'] = e
 
     return out
+
+
+def DLY_bspline(Zi, splinebctype=10, off=None, lc=None):
+
+    """
+    :param Zi: elevation DIFFERENCE between the new survey data and the background (it splines back to 0..)
+    :param splinebctype: type of edge spline you want it to do, currently supports
+                        10 - 0 slope at edge and at offset node, 0 value at edge
+                        1 - 0 slope at edge and at offset node, retains original edge value
+                        0 - linear fit slope between 0 at edge and offset node
+
+    :param off: number of nodes you doing the spline over.  so if off = 5, the spline function will be gernerated
+                between the edge and the node 5 nodes away from the edge.  If handed a tuple it assumes
+                the first value is off_x and the second off_y.  If this is None it will skip the edge spline.
+    :param lc: the smoothing scales for the big spline of the entire dataset at the end (rather than just the ends).
+                If this is None it will skip the big spline
+    :return: Modified Zn based on input parameters.
+            Note that if off=None AND lc=None, this function will make NO changes to the bathymetry difference!!!
+    """
+
+    # I'm going to write my own bspline function and see if that does any better than the one I have been using
+
+    # store old Zi just for comparison
+    Zi_old = Zi.copy()
+
+    # fix my edges....
+    rows, cols = np.shape(Zi)
+    if off is None:
+        pass
+    else:
+
+        off_x = None
+        off_y = None
+        if isinstance(off, int):
+            off_x = off
+            off_y = off
+        elif len(off) == 2:
+            off_x = off[0]
+            off_y = off[1]
+        else:
+            pass
+
+        # did I recognize input for off?
+        assert off_x is not None, 'DLY_bspline error: input for edge spline offset not recognized'
+
+        # make sure off is not too large!!!!!
+        if off_y >= 0.5*rows:
+            off_y = int(0.5*rows - 1)
+        else:
+            pass
+
+        if off_x >= 0.5*cols:
+            off_x = int(0.5*cols - 1)
+        else:
+            pass
+
+        assert off_y < 0.5*rows, 'DLY_bspline error: edge spline y-offset may not exceed half of the number of rows in Zi'
+        assert off_x < 0.5 * cols, 'DLY_bspline error: edge spline x-offset may not exceed half of the number of columns in Zi'
+
+        # do columns
+        for ii in range(0, cols):
+            # top side
+            Z_T = Zi[0:off_y + 1, ii].copy()
+            Z_Tn = edge_spline(Z_T, splinebctype)
+            Zi[0:off_y + 1, ii] = Z_Tn.copy()
+
+            # bottom side
+            Z_B = Zi[-1 * (off_y + 1):, ii].copy()
+            Z_Bi = np.flip(Z_B, 0)
+            Z_Bin = edge_spline(Z_Bi, splinebctype)
+            Z_Bn = np.flip(Z_Bin, 0)
+            Zi[-1 * (off_y + 1):, ii] = Z_Bn.copy()
+
+        # do rows
+        for jj in range(0, rows):
+
+            # left side
+            Z_L = Zi[jj, 0:off_x+1].copy()
+            Z_Ln = edge_spline(Z_L, splinebctype)
+            Zi[jj, 0:off_x + 1] = Z_Ln.copy()
+
+            # right side
+            Z_R = Zi[jj, -1*(off_x+1):].copy()
+            Z_Ri = np.flip(Z_R, 0)
+            Z_Rin = edge_spline(Z_Ri, splinebctype)
+            Z_Rn = np.flip(Z_Rin, 0)
+            Zi[jj, -1 * (off_x + 1):] = Z_Rn.copy()
+
+    if lc is None:
+        Zn = Zi.copy()
+    else:
+        Zn = signal.cspline2d(Zi, lc)
+
+
+    """
+    # just spline this and see what I get?
+    fig_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\DLY_Spline_Test'
+    # check near the midpoint
+    x_check = int(0.5 * len(Zn[0, :]))
+    y_check = int(0.5 * len(Zn[:, 0]))
+    fig_name = 'Xtrans' + '.png'
+    plt.plot(Zi_old[y_check, :], 'r', label='Original')
+    plt.plot(Zn[y_check, :], 'b', label='Splined')
+    plt.xlabel('x-ind')
+    plt.ylabel('Z (m)')
+    plt.legend()
+    plt.savefig(os.path.join(fig_loc, fig_name))
+    plt.close()
+
+    fig_name = 'Ytrans' + '.png'
+    plt.plot(Zi_old[:, x_check], 'r', label='Original')
+    plt.plot(Zn[:, x_check], 'b', label='Splined')
+    plt.xlabel('y-ind')
+    plt.ylabel('Z (m)')
+    plt.legend()
+    plt.savefig(os.path.join(fig_loc, fig_name))
+    plt.close()
+    """
+
+    return Zn
+
+
+def edge_spline(Z, splinebctype):
+    """
+    :param Z:  1D array of elevations (nominally from edge to offset node)
+    :param splinebctype: type of edge spline you want it to do, currently supports
+                        10 - 0 slope at edge and at offset node, 0 value at edge
+                        1 - 0 slope at edge and at offset node, retains original edge value
+                        0 - linear fit slope between 0 at edge and offset node
+    :return: Zn, new values for the 1d array of elevations based on either a cubic
+            or linear function fit to the first and last points of Z
+    """
+    # this is the little function I wrote just to deal with the edges of my new surface.
+    # All it does is take in some input data and return the results
+    # of either a cubic or linear fxn based on splinebctype
+    # ONLY WORKS FOR 0 AT Z[0]!!!  IF USING THE RIGHT SIDE OF DATA YOU HAVE TO INVERT Z THEN INVERT RESULT!!!!
+
+    type = None
+    x = np.array([0 + ii for ii in range(0, len(Z))])
+
+    if splinebctype == 10:
+        # slope and value must be zero at boundary
+        Z0 = 0
+        Zoff = Z[-1]
+        type = 'cubic'
+    elif splinebctype == 1:
+        Z0 = Z[0]
+        Zoff = Z[-1]
+        type = 'cubic'
+    elif splinebctype == 0:
+        Z0 = 0
+        Zoff = Z[-1]
+        type = 'linear'
+    else:
+        pass
+
+    assert type is not None, 'edge_spline error: this splinebctype is not supported!'
+
+    if type == 'linear':
+        m = Zoff*(1/float(x[-1]))
+        b = Z0
+        Zn = m*x + b
+    elif type == 'cubic':
+        a = 2*(Z0 - Zoff)*(1/float(np.power(x[-1], 3)))
+        c = 0
+        d = Z0
+        b = -3*a*x[-1]*0.5
+        Zn = a * np.power(x, 3) + b * np.power(x, 2) + c * np.power(x, 1) + d
+    else:
+        pass
+
+    return Zn
+
+
+
+
 
 
 

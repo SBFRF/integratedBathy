@@ -5,7 +5,7 @@ import gdal
 import os, sys
 import geoprocess as gp
 import numpy as np
-from makenc import makenc_intBATHY
+from makenc import makenc_initBATHY
 sys.path.append('/home/number/repos')
 import sblib as sb
 import matplotlib.pyplot as plt
@@ -130,5 +130,5 @@ dataDict['utmNorthing'] = utmN
 dataDict['latitude'] = lat
 dataDict['longitude'] = lon
 
-makenc_intBATHY(ofname, dataDict, globalYaml, varYaml)
+makenc_initBATHY(ofname, dataDict, globalYaml, varYaml)
 

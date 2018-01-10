@@ -662,7 +662,7 @@ def makenc_CSHORErun(ofname, dataDict, globalYaml, varYaml):
     # close file
     fid.close()
 
-def makenc_intBATHY(ofname, dataDict, globalYaml, varYaml):
+def makenc_initBATHY(ofname, dataDict, globalYaml, varYaml):
     """
     :param ofname: this is the name of the ncfile you are building
     :param dataDict: keys must include...
@@ -748,6 +748,7 @@ def makenc_tiBATHY(ofname, dataDict, globalYaml, varYaml):
 
         surveyNumber - this is a 1D array of length ns (number of surveys in the month)
         surveyTime - this is a 1D array of length ns
+        y_smooth = this is a 1D array of length ns (the cross-shore smoothing scale used)
 
     :param globalYaml:
     :param varYaml:
