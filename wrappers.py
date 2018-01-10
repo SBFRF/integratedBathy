@@ -467,8 +467,7 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
             dSTR_e = dSTR_e[0:5] + str(int(dSTR_e[5:7]) + 1).zfill(2) + '-01T00:00:00Z'
         d_e = DT.datetime.strptime(dSTR_e, '%Y-%m-%dT%H:%M:%SZ')
         d_s = DT.datetime.strptime(dSTR_s, '%Y-%m-%dT%H:%M:%SZ')
-        dList = OrderedDict(
-            ((d_s + DT.timedelta(_)).strftime(r"%b-%y"), None) for _ in xrange((d_e - d_s).days + 31)).keys()
+        dList = OrderedDict(((d_s + DT.timedelta(_)).strftime(r"%b-%y"), None) for _ in xrange((d_e - d_s).days)).keys()
         dList = [DT.datetime.strptime(date, r"%b-%y") for date in dList]
 
 

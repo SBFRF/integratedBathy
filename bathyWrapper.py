@@ -75,7 +75,7 @@ def bathyWrapper():
         dSTR_e = survey_time_N.strftime('%Y-%m-%dT%H%M%SZ')
 
         wrappers.makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=scalecDict, splineDict=splineDict)
-        mBATHY.makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=scalecDict, splineDict=splineDict, plot=None)
+        # mBATHY.makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=scalecDict, splineDict=splineDict, plot=None)
 
 
 if __name__ == "__main__":
