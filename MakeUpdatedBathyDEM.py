@@ -2577,7 +2577,7 @@ def getSurveyData(d1, d2):
             # pull out the mean time
             surv_timeM = surv_times[0] + (surv_times[-1] - surv_times[0]) / 2
             # round it to nearest 12 hours.
-            surv_timeM = sb.roundtime(surv_timeM, roundTo=1 * 12 * 3600)
+            surv_timeM = sb.roundtime(surv_timeM, roundTo=1 * 6 * 3600) + DT.timedelta(hours=0.5)
             # if the rounded time IS in the month, great
             if (surv_timeM >= d1) and (surv_timeM < d2):
                 pass

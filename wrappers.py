@@ -509,7 +509,7 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                 # pull out the mean time
                 stimeMS = min(stimesS) + (max(stimesS) - min(stimesS)) / 2
                 # round it to nearest 12 hours.
-                stimeM = sb.roundtime(stimeMS, roundTo=1 * 12 * 3600)
+                stimeM = sb.roundtime(stimeMS, roundTo=1 * 6 * 3600) + DT.timedelta(hours=0.25)
                 timeunits = 'seconds since 1970-01-01 00:00:00'
                 surveyTime[ss] = nc.date2num(stimeM, timeunits)
 
