@@ -506,12 +506,40 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                 idt = (newDict['surveyNumber'] == surveys[ss])
                 # convert the times to a single time for each survey
                 stimesS = newDict['surveyTime'][idt]
-                # pull out the mean time
-                stimeMS = min(stimesS) + (max(stimesS) - min(stimesS)) / 2
-                # round it to nearest 12 hours.
-                stimeM = sb.roundtime(stimeMS, roundTo=1 * 6 * 3600) + DT.timedelta(hours=0.25)
-                timeunits = 'seconds since 1970-01-01 00:00:00'
-                surveyTime[ss] = nc.date2num(stimeM, timeunits)
+                if (max(stimesS) - min(stimesS)) > DT.timedelta(days=3):
+                    surveyTime[ss] = -1000
+                else:
+                    # pull out the mean time
+                    stimeMS = min(stimesS) + (max(stimesS) - min(stimesS)) / 2
+                    # round it to nearest 12 hours.
+                    stimeM = sb.roundtime(stimeMS, roundTo=1 * 6 * 3600) + DT.timedelta(hours=0.25)
+                    # check to make sure the mean time is in the month we just pulled
+                    if (stimeM >= d1) & (stimeM < d2):
+                        timeunits = 'seconds since 1970-01-01 00:00:00'
+                        surveyTime[ss] = nc.date2num(stimeM, timeunits)
+                    else:
+                        surveyTime[ss] = -1000
+
+            # throw out weird surveys
+            indKeep = np.where(surveyTime >= 0)
+            surveyTime = surveyTime[indKeep]
+            surveys = surveys[indKeep]
+
+            # also remove that data from newDict
+            tempSurvNum = newDict['surveyNumber']
+            tempElev = newDict['elevation']
+            tempxFRF = newDict['xFRF']
+            tempyFRF = newDict['yFRF']
+            tempProfNum = newDict['profileNumber']
+            tempSurvTime = newDict['surveyTime']
+            indKeepData = np.where(np.in1d(tempSurvNum, surveys))
+            newDict['surveyNumber'] = tempSurvNum[indKeepData]
+            newDict['elevation'] = tempElev[indKeepData]
+            newDict['xFRF'] = tempxFRF[indKeepData]
+            newDict['yFRF'] = tempyFRF[indKeepData]
+            newDict['profileNumber'] = tempProfNum[indKeepData]
+            newDict['surveyTime'] = tempSurvTime[indKeepData]
+
 
             # background data
             backgroundDict = {}

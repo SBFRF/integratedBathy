@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 import os
 
 
-nc_loc = 'http://134.164.129.55/thredds/dodsC/cmtb/projects/DavidTest/2017/CMTB-integratedBathyProduct_survey_201709.nc'
+nc_loc = 'http://134.164.129.55/thredds/dodsC/FRF/geomorphology/elevationTransects/survey/FRF_20170906_1142_WS_NAVD88_CRAB_GPS_UTC_v20171214.nc'
 bathy = nc.Dataset(nc_loc)
 
 tempDict = {}
@@ -12,6 +12,8 @@ tempDict['time'] = nc.num2date(bathy.variables['time'][:], bathy.variables['time
 tempDict['elevation'] = bathy.variables['elevation'][:]
 tempDict['xFRF'] = bathy.variables['xFRF'][:]
 tempDict['yFRF'] = bathy.variables['yFRF'][:]
+tempDict['surveyNumber'] = bathy.variables['surveyNumber'][:]
+
 
 # zoomed in pcolor plot on AOI
 fig_loc = 'C:/Users/dyoung8/Desktop/David Stuff/Projects/CSHORE/Bathy Interpolation/Test Figures/'
