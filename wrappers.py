@@ -594,7 +594,7 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                     plt.savefig(os.path.join(fig_loc, fig_name))
                     plt.close()
     
-                   t = 1
+                    t = 1
                     """
 
             # go time!  this is scaleC + spline!
