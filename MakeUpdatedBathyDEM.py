@@ -1874,6 +1874,8 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
                                     whatever my background is supposed to be for this run
                         xFRF - 1D array of xFRF positions corresponding to the second dimension of elevation
                         yFRF - 1D array of yFRF positions corresponding to the first dimension of elevation
+                        updateTime - 2D masked array that contains the most recent update
+                                     to each node in the background bathymetry for this time step.
     :param newDict: keys are:
                         elevation - this will probably either be a 1D array of elevations from a survey or a 3D array of
                                     elevations where the first dimension is time and the next two are y and X, respectively.
@@ -1935,13 +1937,14 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
             yFRF:   exact same as backgroundDict['xFRF']
             surveyNumber: 1D array corresponding to the survey numbers for each grid.
                           This will not exist if the input data was a grid
+            updateTime: 3D masked array that shows the most recent update to each bathymetry node for each time-step.
     """
 
 
     # check scalecDict and splineDict
     if scalecDict is None:
-        x_smooth = 100  # scale c interp x-direction smoothing
-        y_smooth = 200  # scale c interp y-direction smoothing
+        x_smooth = 40  # scale c interp x-direction smoothing
+        y_smooth = 100  # scale c interp y-direction smoothing
     else:
         x_smooth = scalecDict['x_smooth']  # scale c interp x-direction smoothing
         y_smooth = scalecDict['y_smooth']  # scale c interp y-direction smoothing
@@ -1968,6 +1971,7 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
     Zi = backgroundDict['elevation']
     xFRFi_vec = backgroundDict['xFRF']
     yFRFi_vec = backgroundDict['yFRF']
+    updateMAT = backgroundDict['updateTime']
     # read out the dx and dy of the background grid!!!
     # assume this is constant grid spacing!!!!!
     dx = abs(xFRFi_vec[1] - xFRFi_vec[0])
@@ -1997,9 +2001,11 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
 
     # pre-allocate my netCDF dictionary variables here....
     elevation = np.empty((num_iter, rows, cols))
+    updateTime = np.empty((num_iter, rows, cols))
     smoothAL = np.empty(num_iter)
     elevation[:] = np.nan
     smoothAL[:] = np.nan
+    updateTime[:] = np.nan
 
 
     if grid:
@@ -2252,6 +2258,7 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
         # if you wound up throwing out this survey!!!
         if x0 is None:
             newZi = Zi
+            updateMATi = updateMAT
 
         else:
 
@@ -2363,10 +2370,15 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
             newZi = Zi.copy()
             newZi[y1:y2 + 1, x1:x2 + 1] = newZn
 
+            # we also want to create and store a variable for the last time this was updated.
+            updateMATi = updateMAT.copy()
+            updateMATi[y1:y2 + 1, x1:x2 + 1] = np.ma.array(newDict['surveyMeanTime'][tt]*np.ones(np.shape(newZn)), mask=np.zeros(np.shape(newZn)))
 
         # update Zi for next iteration
         del Zi
         Zi = newZi
+        del updateMAT
+        updateMAT = updateMATi
 
         # make sure these reset to the original values
         if splineDict is None:
@@ -2382,6 +2394,7 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
 
         # go ahead and stack this stuff in my new variables I am building
         elevation[tt, :, :] = newZi
+        updateTime[tt, :, :] = updateMATi
         smoothAL[tt] = y_smooth_u
         if grid:
             pass
@@ -2394,6 +2407,7 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
     out['smoothAL'] = smoothAL
     out['xFRF'] = xFRFi_vec
     out['yFRF'] = yFRFi_vec
+    out['updateTime'] = updateTime
 
     if grid:
         pass

@@ -748,7 +748,11 @@ def makenc_tiBATHY(ofname, dataDict, globalYaml, varYaml):
 
         surveyNumber - this is a 1D array of length ns (number of surveys in the month)
         surveyTime - this is a 1D array of length ns
-        y_smooth = this is a 1D array of length ns (the cross-shore smoothing scale used)
+        y_smooth - this is a 1D array of length ns (the cross-shore smoothing scale used)
+
+        updateTime - this is the most recent update to this cell at this time-step for every point in the grid.
+                    this will ALWAYS be a 3D masked array.  values that are masked have NEVER been updated
+                    (i.e., still working off the time mean background bathymetry.)
 
     :param globalYaml:
     :param varYaml:
