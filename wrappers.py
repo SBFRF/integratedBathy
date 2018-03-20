@@ -582,7 +582,8 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                     # it wont have an update time in this case, because it came from the time-mean background.
                     # so what should go here instead?
                     tempUpTime = np.zeros(np.shape(backgroundDict['elevation']))
-                    backgroundDict['updateTime'] = np.ma.array(tempUpTime, mask=np.ones(np.shape(backgroundDict['elevation'])))
+                    tempUpTime[:] = np.nan
+                    backgroundDict['updateTime'] = np.ma.array(tempUpTime, mask=np.ones(np.shape(backgroundDict['elevation'])), fill_value=-999)
 
                     """
                     # how we looking?

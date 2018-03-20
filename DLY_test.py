@@ -19,7 +19,41 @@ import wrappers
 from scaleCinterp_python.DEM_generator import DEM_generator
 import MakeUpdatedBathyDEM as mBATHY
 
+"""
+# how much does my new stuff look like what allison had?
+bathyDict = {}
+nc_url = '/home/david/BathyTroubleshooting/ncFiles/2012/CMTB-integratedBathyProduct_survey_201202.nc'
+bathy = nc.Dataset(nc_url)
+bathy_times = nc.num2date(bathy.variables['time'][:], bathy.variables['time'].units, bathy.variables['time'].calendar)
+surveyNumber = bathy.variables['surveyNumber'][:]
 
+elevation = bathy.variables['elevation'][:]
+xFRF = bathy.variables['xFRF'][:]
+yFRF = bathy.variables['yFRF'][:]
+
+# why is this not masked?!!!!!
+updateTimes = bathy.variables['updateTime'][:]
+t = 1
+fig_loc = '/home/david/BathyTroubleshooting'
+
+for tt in range(0, np.shape(elevation)[0]):
+    dSTR = DT.datetime.strftime(bathy_times[tt], '%Y-%m-%dT%H:%M:%SZ')
+    # look at my two surveys...
+    fig_name = 'testBathy_' + dSTR[0:10] + '.png'
+    plt.figure()
+    plt.pcolor(xFRF, yFRF, elevation[tt, :, :], cmap=plt.cm.jet, vmin=-13, vmax=5)
+    cbar = plt.colorbar()
+    cbar.set_label('(m)')
+    axes = plt.gca()
+    axes.set_xlim([-50, 700])
+    axes.set_ylim([-50, 1050])
+    plt.xlabel('xFRF (m)')
+    plt.ylabel('yFRF (m)')
+    plt.savefig(os.path.join(fig_loc, fig_name))
+    plt.close()
+
+t = 1
+"""
 
 """
 # check the integrated bathymetry from those days allison showed
@@ -215,7 +249,7 @@ wbysmooth = 300  # y-edge smoothing scale
 wbxsmooth = 100  # x-edge smoothing scale
 # It is used in conjunction with the MSE from splineCinterp to compute the spline weights (wb)
 dSTR_s = '2012-01-01T00:00:00Z'
-dSTR_e = '2018-01-01T00:00:00Z'
+dSTR_e = '2016-01-01T00:00:00Z'
 
 dir_loc = '/home/david/BathyTroubleshooting/ncFiles'
 

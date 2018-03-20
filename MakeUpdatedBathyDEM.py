@@ -2001,11 +2001,12 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
 
     # pre-allocate my netCDF dictionary variables here....
     elevation = np.empty((num_iter, rows, cols))
-    updateTime = np.empty((num_iter, rows, cols))
+    tempUpTime = np.zeros((num_iter, rows, cols))
+    tempUpTime[:] = np.nan
+    updateTime = np.ma.array(tempUpTime, mask=np.ones(np.shape(elevation)), fill_value=-999)
     smoothAL = np.empty(num_iter)
     elevation[:] = np.nan
     smoothAL[:] = np.nan
-    updateTime[:] = np.nan
 
 
     if grid:
@@ -2372,7 +2373,7 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
 
             # we also want to create and store a variable for the last time this was updated.
             updateMATi = updateMAT.copy()
-            updateMATi[y1:y2 + 1, x1:x2 + 1] = np.ma.array(newDict['surveyMeanTime'][tt]*np.ones(np.shape(newZn)), mask=np.zeros(np.shape(newZn)))
+            updateMATi[y1:y2 + 1, x1:x2 + 1] = np.ma.array(newDict['surveyMeanTime'][tt]*np.ones(np.shape(newZn)), mask=np.zeros(np.shape(newZn)), fill_value=-999)
 
         # update Zi for next iteration
         del Zi
