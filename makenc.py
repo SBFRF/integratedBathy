@@ -748,7 +748,11 @@ def makenc_tiBATHY(ofname, dataDict, globalYaml, varYaml):
 
         surveyNumber - this is a 1D array of length ns (number of surveys in the month)
         surveyTime - this is a 1D array of length ns
-        y_smooth = this is a 1D array of length ns (the cross-shore smoothing scale used)
+        y_smooth - this is a 1D array of length ns (the cross-shore smoothing scale used)
+
+        updateTime - this is the most recent update to this cell at this time-step for every point in the grid.
+                    this will ALWAYS be a 3D masked array.  values that are masked have NEVER been updated
+                    (i.e., still working off the time mean background bathymetry.)
 
     :param globalYaml:
     :param varYaml:
@@ -765,6 +769,17 @@ def makenc_tiBATHY(ofname, dataDict, globalYaml, varYaml):
     time = fid.createDimension('time', dataDict['time'].shape[0])
     xFRF = fid.createDimension('xFRF', dataDict['xFRF'].shape[0])
     yFRF = fid.createDimension('yFRF', dataDict['yFRF'].shape[0])
+
+    # OKAY THE DEAL IS YOU HAVE TO PASS IT A NON-MASKED ARRAY THAT ALREADY HAS THE FILL VALUES IN WHERE YOU WANT THEM TO BE
+    # THIS IS A STUPID WAY TO DO IT AND I DONT LIKE IT.
+    tempUpdateTime = dataDict['updateTime']
+    tempUpdateTime[np.ma.getmask(tempUpdateTime)] = -999
+    del dataDict['updateTime']
+    dataDict['updateTime'] = np.array(tempUpdateTime)
+    # remove the mask?
+
+    # So we need to figure out what to do here.  The netcdf file is not saving the mask.
+    # And it is not converting the nan values into masked values.  so I'm not sure what to do?
 
     # write data to file
     write_data_to_nc(fid, varAtts, dataDict)

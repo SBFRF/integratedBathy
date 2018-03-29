@@ -9,7 +9,7 @@ from getdatatestbed.getDataFRF import getObs
 import makenc
 from matplotlib import pyplot as plt
 from scipy.interpolate import griddata
-from gridTools import gridTools as gT
+from sblib import gridTools as gT
 import pandas as pd
 from bsplineFunctions import bspline_pertgrid
 import matplotlib as m

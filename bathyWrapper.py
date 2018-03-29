@@ -15,7 +15,7 @@ def bathyWrapper():
     # generic locations
     survey_ncml = 'http://134.164.129.55/thredds/dodsC/FRF/geomorphology/elevationTransects/survey/surveyTransects.ncml'
     bathy_ncml = 'http://134.164.129.62:8080/thredds/dodsC/CMTB/integratedBathyProduct/survey/survey.ncml'
-    dir_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles'
+    dir_loc = '/home/david/BathyTroubleshooting/ncFiles'
 
     # scale c and spline stuff
     # list of inputs!!!!!

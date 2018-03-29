@@ -447,14 +447,15 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
             writes ncfiles for the new DEM's to the location dir_loc
     """
     # this is the standard background bathymetry that we started from.
-    nc_b_url = 'http://134.164.129.55/thredds/dodsC/cmtb/grids/TimeMeanBackgroundDEM/backgroundDEMt0_TimeMean.nc'
+    # nc_b_url = 'http://134.164.129.55/thredds/dodsC/cmtb/grids/TimeMeanBackgroundDEM/backgroundDEMt0_TimeMean.nc'
+    nc_b_url = '/home/david/BathyTroubleshooting/BackgroundFiles/backgroundDEMt0_TimeMean.nc'
     # this is the ncml for the cBathy ingegrated bathymetries
     nc_url = 'FILL IN'
 
 
     # Yaml files for my .nc files!!!!!
-    global_yaml = 'C:\Users\dyoung8\PycharmProjects\makebathyinterp\yamls\BATHY\FRFti_global.yml'
-    var_yaml = 'C:\Users\dyoung8\PycharmProjects\makebathyinterp\yamls\BATHY\FRFti_var.yml'
+    global_yaml = '/home/david/PycharmProjects/makebathyinterp/yamls/BATHY/FRFti_global.yml'
+    var_yaml = '/home/david/PycharmProjects/makebathyinterp/yamls/BATHY/FRFti_var.yml'
 
     # check the ncStep input
     d_s = None
@@ -539,6 +540,7 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
             newDict['yFRF'] = tempyFRF[indKeepData]
             newDict['profileNumber'] = tempProfNum[indKeepData]
             newDict['surveyTime'] = tempSurvTime[indKeepData]
+            newDict['surveyMeanTime'] = surveyTime
 
 
             # background data
@@ -555,6 +557,7 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                 backgroundDict['elevation'] = old_bathy.variables['elevation'][t_idx, :]
                 backgroundDict['xFRF'] = old_bathy.variables['xFRF'][:]
                 backgroundDict['yFRF'] = old_bathy.variables['yFRF'][:]
+                backgroundDict['updateTime'] = old_bathy.variables['updateTime'][t_idx, :]
             except:
                 try:
                     # look for the most up to date bathy in the ncml file....
@@ -567,14 +570,20 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                     backgroundDict['elevation'] = old_bathy.variables['elevation'][t_idx, :]
                     backgroundDict['xFRF'] = old_bathy.variables['xFRF'][:]
                     backgroundDict['yFRF'] = old_bathy.variables['yFRF'][:]
+                    backgroundDict['updateTime'] = old_bathy.variables['updateTime'][t_idx, :]
                 except:
 
-                    # pull the most up-to-date integrated bathymetry product (prior to the cbathy start date)
+                    # pull the time mean background bathymetry if you don't have any updated ones
                     old_bathy = nc.Dataset(nc_b_url)
                     backgroundDict['elevation'] = old_bathy.variables['elevation'][:]
                     backgroundDict['xFRF'] = old_bathy.variables['xFRF'][:]
                     backgroundDict['yFRF'] = old_bathy.variables['yFRF'][:]
                     backgroundDict['tmBackTog'] = 1
+                    # it wont have an update time in this case, because it came from the time-mean background.
+                    # so what should go here instead?
+                    tempUpTime = np.zeros(np.shape(backgroundDict['elevation']))
+                    tempUpTime[:] = np.nan
+                    backgroundDict['updateTime'] = np.ma.array(tempUpTime, mask=np.ones(np.shape(backgroundDict['elevation'])), fill_value=-999)
 
                     """
                     # how we looking?
@@ -594,13 +603,14 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                     plt.savefig(os.path.join(fig_loc, fig_name))
                     plt.close()
     
-                   t = 1
+                    t = 1
                     """
 
             # go time!  this is scaleC + spline!
             out = mBATHY.makeUpdatedBATHY(backgroundDict, newDict, scalecDict=scalecDict, splineDict=splineDict)
             elevation = out['elevation']
             smoothAL = out['smoothAL']
+            updateTime = out['updateTime']
 
 
             # check to see if any of the data has nan's.
@@ -612,6 +622,7 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                 smoothAL = smoothAL[~idN]
                 surveyTime = surveyTime[~idN]
                 surveys = surveys[~idN]
+                updateTime = updateTime[~idN, :, :]
 
             # is there anything left?
             test = np.shape(elevation)
@@ -645,6 +656,8 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                 easting = E
                 northing = N
 
+                # ok, here is where we need to figure out what to do with updatedCells
+
                 # write the nc_file for this month, like a boss, with greatness
                 nc_dict = {}
                 nc_dict['elevation'] = elevation
@@ -657,6 +670,7 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                 nc_dict['time'] = np.array(surveyTime)
                 nc_dict['surveyNumber'] = surveys
                 nc_dict['y_smooth'] = smoothAL
+                nc_dict['updateTime'] = updateTime
 
 
                 # what does the name need to be?

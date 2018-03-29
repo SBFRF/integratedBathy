@@ -1,6 +1,6 @@
 # stuff
 
-_variables: ['elevation', 'latitude', 'longitude', 'xFRF', 'yFRF', 'surveyNumber', 'y_smooth', 'time']
+_variables: ['elevation', 'latitude', 'longitude', 'xFRF', 'yFRF', 'surveyNumber', 'y_smooth', 'time', 'updateTime']
 _attributes: ['notes']
 _dimensions: ['time', 'yFRF', 'xFRF']
 
@@ -11,6 +11,16 @@ time:
     long_name: 'UTC Survey Date of the midpoint of the survey rounded to nearest 12 hrs'
     data_type: 'f8'
     dim: ['time']
+    calendar: 'gregorian'
+    fill_value: '-999'
+
+updateTime:
+    name: 'updateTime'
+    units: 'seconds since 1970-01-01 00:00:00'
+    standard_name: 'updateTime'
+    long_name: 'Survey time of the most recent update to this particular cell of the integrated bathy product.'
+    data_type: 'f8'
+    dim: ['time', 'yFRF', 'xFRF']
     calendar: 'gregorian'
     fill_value: '-999'
 

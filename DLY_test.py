@@ -9,7 +9,7 @@ from getdatatestbed.getDataFRF import getObs
 import makenc
 from matplotlib import pyplot as plt
 from scipy.interpolate import griddata
-from gridTools import gridTools as gT
+from sblib import gridTools as gT
 import pandas as pd
 from bsplineFunctions import bspline_pertgrid
 import matplotlib as m
@@ -18,6 +18,264 @@ import datetime as DT
 import wrappers
 from scaleCinterp_python.DEM_generator import DEM_generator
 import MakeUpdatedBathyDEM as mBATHY
+
+
+# how much does my new stuff look like what allison had?
+bathyDict = {}
+nc_url = '/home/david/BathyTroubleshooting/ncFiles/2015/CMTB-integratedBathyProduct_survey_201510.nc'
+bathy = nc.Dataset(nc_url)
+bathy_times = nc.num2date(bathy.variables['time'][:], bathy.variables['time'].units, bathy.variables['time'].calendar)
+surveyNumber = bathy.variables['surveyNumber'][:]
+
+
+elevation = bathy.variables['elevation'][:]
+xFRF = bathy.variables['xFRF'][:]
+yFRF = bathy.variables['yFRF'][:]
+
+# why is this not masked?!!!!!
+updateTimes = bathy.variables['updateTime'][:]
+fig_loc = '/home/david/BathyTroubleshooting'
+
+for tt in range(0, np.shape(elevation)[0]):
+
+    dSTR = DT.datetime.strftime(bathy_times[tt], '%Y-%m-%dT%H:%M:%SZ')
+    # look at my two surveys...
+    fig_name = 'testBathy_' + dSTR[0:10] + '.png'
+    plt.figure()
+    plt.pcolor(xFRF, yFRF, elevation[tt, :, :], cmap=plt.cm.jet, vmin=-13, vmax=5)
+    cbar = plt.colorbar()
+    cbar.set_label('(m)')
+    axes = plt.gca()
+    axes.set_xlim([-50, 700])
+    axes.set_ylim([-50, 1050])
+    plt.xlabel('xFRF (m)')
+    plt.ylabel('yFRF (m)')
+    plt.savefig(os.path.join(fig_loc, fig_name))
+    plt.close()
+
+
+    # alongshore transect plots
+    x_loc_check1 = int(100)
+    x_loc_check2 = int(200)
+    x_loc_check3 = int(350)
+    x_check1 = np.where(xFRF == x_loc_check1)[0][0]
+    x_check2 = np.where(xFRF == x_loc_check2)[0][0]
+    x_check3 = np.where(xFRF == x_loc_check3)[0][0]
+
+    # plot X and Y transects from newZdiff to see if it looks correct?
+    fig_name = 'testBathy_' + dSTR[0:10] + '_Ytrans' + '.png'
+    fig = plt.figure(figsize=(8, 9))
+    ax1 = plt.subplot2grid((3, 1), (0, 0), colspan=1)
+    ax1.plot(yFRF, elevation[tt, :, x_check1], 'r')
+    ax1.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
+    ax1.set_ylabel('Elevation ($m$)', fontsize=16)
+    ax1.set_title('$X=%s$' % (str(x_loc_check1)), fontsize=16)
+    for tick in ax1.xaxis.get_major_ticks():
+        tick.label.set_fontsize(14)
+    for tick in ax1.yaxis.get_major_ticks():
+        tick.label.set_fontsize(14)
+    ax1.tick_params(labelsize=14)
+    ax1.text(0.10, 0.95, '(a)', horizontalalignment='left', verticalalignment='top',
+             transform=ax1.transAxes, fontsize=16)
+    ax1.set_xlim([-50, 1050])
+
+    ax2 = plt.subplot2grid((3, 1), (1, 0), colspan=1)
+    ax2.plot(yFRF, elevation[tt, :, x_check2], 'r')
+    ax2.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
+    ax2.set_ylabel('Elevation ($m$)', fontsize=16)
+    ax2.set_title('$X=%s$' % (str(x_loc_check2)), fontsize=16)
+    for tick in ax2.xaxis.get_major_ticks():
+        tick.label.set_fontsize(14)
+    for tick in ax2.yaxis.get_major_ticks():
+        tick.label.set_fontsize(14)
+    ax2.tick_params(labelsize=14)
+    ax2.text(0.10, 0.95, '(b)', horizontalalignment='left', verticalalignment='top',
+             transform=ax2.transAxes, fontsize=16)
+    ax2.set_xlim([-50, 1050])
+
+    ax3 = plt.subplot2grid((3, 1), (2, 0), colspan=1)
+    ax3.plot(yFRF, elevation[tt, :, x_check3], 'r')
+    ax3.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
+    ax3.set_ylabel('Elevation ($m$)', fontsize=16)
+    ax3.set_title('$X=%s$' % (str(x_loc_check3)), fontsize=16)
+    for tick in ax3.xaxis.get_major_ticks():
+        tick.label.set_fontsize(14)
+    for tick in ax3.yaxis.get_major_ticks():
+        tick.label.set_fontsize(14)
+    ax3.tick_params(labelsize=14)
+    ax3.text(0.10, 0.95, '(c)', horizontalalignment='left', verticalalignment='top',
+             transform=ax3.transAxes, fontsize=16)
+    ax3.set_xlim([-50, 1050])
+
+    fig.subplots_adjust(wspace=0.4, hspace=0.1)
+    fig.tight_layout(pad=1, h_pad=2.5, w_pad=1, rect=[0.0, 0.0, 1.0, 0.925])
+    fig.savefig(os.path.join(fig_loc, fig_name), dpi=300)
+    plt.close()
+
+    # cross-shore transect plots
+    y_loc_check1 = int(250)
+    y_loc_check2 = int(500)
+    y_loc_check3 = int(750)
+    y_check1 = np.where(yFRF == y_loc_check1)[0][0]
+    y_check2 = np.where(yFRF == y_loc_check2)[0][0]
+    y_check3 = np.where(yFRF == y_loc_check3)[0][0]
+    # plot a transect going in the cross-shore just to check it
+    fig_name = 'testBathy_' + dSTR[0:10] + '_Xtrans' + '.png'
+
+    fig = plt.figure(figsize=(8, 9))
+    ax1 = plt.subplot2grid((3, 1), (0, 0), colspan=1)
+    ax1.plot(xFRF, elevation[tt, y_check1, :], 'b')
+    ax1.set_xlabel('Cross-shore - $x$ ($m$)', fontsize=16)
+    ax1.set_ylabel('Elevation ($m$)', fontsize=16)
+    ax1.set_title('$Y=%s$' % (str(y_loc_check1)), fontsize=16)
+    for tick in ax1.xaxis.get_major_ticks():
+        tick.label.set_fontsize(14)
+    for tick in ax1.yaxis.get_major_ticks():
+        tick.label.set_fontsize(14)
+    ax1.tick_params(labelsize=14)
+    ax1.text(0.10, 0.95, '(a)', horizontalalignment='left', verticalalignment='top',
+             transform=ax1.transAxes, fontsize=16)
+
+    ax2 = plt.subplot2grid((3, 1), (1, 0), colspan=1)
+    ax2.plot(xFRF, elevation[tt, y_check2, :], 'b')
+    ax2.set_xlabel('Cross-shore - $x$ ($m$)', fontsize=16)
+    ax2.set_ylabel('Elevation ($m$)', fontsize=16)
+    ax2.set_title('$Y=%s$' % (str(y_loc_check2)), fontsize=16)
+    for tick in ax2.xaxis.get_major_ticks():
+        tick.label.set_fontsize(14)
+    for tick in ax2.yaxis.get_major_ticks():
+        tick.label.set_fontsize(14)
+    ax2.tick_params(labelsize=14)
+    ax2.text(0.10, 0.95, '(b)', horizontalalignment='left', verticalalignment='top',
+             transform=ax2.transAxes, fontsize=16)
+
+    ax3 = plt.subplot2grid((3, 1), (2, 0), colspan=1)
+    ax3.plot(xFRF, elevation[tt, y_check3, :], 'b')
+    ax3.set_xlabel('Cross-shore - $x$ ($m$)', fontsize=16)
+    ax3.set_ylabel('Elevation ($m$)', fontsize=16)
+    ax3.set_title('$Y=%s$' % (str(y_loc_check3)), fontsize=16)
+    for tick in ax3.xaxis.get_major_ticks():
+        tick.label.set_fontsize(14)
+    for tick in ax3.yaxis.get_major_ticks():
+        tick.label.set_fontsize(14)
+    ax3.tick_params(labelsize=14)
+    ax3.text(0.10, 0.95, '(c)', horizontalalignment='left', verticalalignment='top',
+             transform=ax3.transAxes, fontsize=16)
+
+    fig.subplots_adjust(wspace=0.4, hspace=0.1)
+    fig.tight_layout(pad=1, h_pad=2.5, w_pad=1, rect=[0.0, 0.0, 1.0, 0.925])
+    fig.savefig(os.path.join(fig_loc, fig_name), dpi=300)
+    plt.close()
+
+
+t = 1
+
+
+"""
+# check the integrated bathymetry from those days allison showed
+dSTR_s = '2016-10-22T00:00:00Z'
+dSTR_sr = '2016-10-19T00:00:00Z'
+d_s = DT.datetime.strptime(dSTR_s, '%Y-%m-%dT%H:%M:%SZ')
+d_sr = DT.datetime.strptime(dSTR_sr, '%Y-%m-%dT%H:%M:%SZ')
+backgroundDict = {}
+nc_url = 'http://134.164.129.55/thredds/dodsC/cmtb/integratedBathyProduct/survey/survey.ncml'
+old_bathy = nc.Dataset(nc_url)
+ob_times = nc.num2date(old_bathy.variables['time'][:], old_bathy.variables['time'].units, old_bathy.variables['time'].calendar)
+
+# find newest time prior to this
+t_mask = (ob_times <= d_s)  # boolean true/false of time
+t_idx = np.where(t_mask)[0][-1]  # I want the MOST RECENT ONE - i.e., the last one
+backgroundDict['elevation'] = old_bathy.variables['elevation'][t_idx, :]
+backgroundDict['xFRF'] = old_bathy.variables['xFRF'][:]
+backgroundDict['yFRF'] = old_bathy.variables['yFRF'][:]
+backgroundDict['time'] = ob_times[t_idx]
+
+newDict = mBATHY.getSurveyData(d_sr, d_s)
+
+# plot this this and save the results to a test file.
+fig_loc = '/home/david/BathyTroubleshooting'
+
+
+# zoomed in pcolor plot on AOI
+fig_name = 'cBathyDEM_' + dSTR_s[0:10] + '.png'
+plt.figure()
+plt.pcolor(backgroundDict['xFRF'], backgroundDict['yFRF'], backgroundDict['elevation'], cmap=plt.cm.jet, vmin=-13, vmax=5)
+cbar = plt.colorbar()
+cbar.set_label('(m)')
+axes = plt.gca()
+axes.set_xlim([-50, 700])
+axes.set_ylim([-50, 1050])
+plt.xlabel('xFRF (m)')
+plt.ylabel('yFRF (m)')
+plt.savefig(os.path.join(fig_loc, fig_name))
+plt.close()
+
+
+#alongshore transect plots
+x_loc_check1 = int(100)
+x_loc_check2 = int(200)
+x_loc_check3 = int(350)
+x_check1 = np.where(backgroundDict['xFRF'] == x_loc_check1)[0][0]
+x_check2 = np.where(backgroundDict['xFRF'] == x_loc_check2)[0][0]
+x_check3 = np.where(backgroundDict['xFRF'] == x_loc_check3)[0][0]
+
+# plot X and Y transects from newZdiff to see if it looks correct?
+fig_name = 'cBathyDEM_' + dSTR_s[0:10] + '_Ytrans' + '.png'
+fig = plt.figure(figsize=(8, 9))
+ax1 = plt.subplot2grid((3, 1), (0, 0), colspan=1)
+ax1.plot(backgroundDict['yFRF'], backgroundDict['elevation'][:, x_check1], 'r')
+ax1.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
+ax1.set_ylabel('Elevation ($m$)', fontsize=16)
+ax1.set_title('$X=%s$' % (str(x_loc_check1)), fontsize=16)
+for tick in ax1.xaxis.get_major_ticks():
+    tick.label.set_fontsize(14)
+for tick in ax1.yaxis.get_major_ticks():
+    tick.label.set_fontsize(14)
+ax1.tick_params(labelsize=14)
+ax1.text(0.10, 0.95, '(a)', horizontalalignment='left', verticalalignment='top',
+         transform=ax1.transAxes, fontsize=16)
+ax1.set_xlim([-50, 1050])
+
+ax2 = plt.subplot2grid((3, 1), (1, 0), colspan=1)
+ax2.plot(backgroundDict['yFRF'], backgroundDict['elevation'][:, x_check2], 'r')
+ax2.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
+ax2.set_ylabel('Elevation ($m$)', fontsize=16)
+ax2.set_title('$X=%s$' % (str(x_loc_check2)), fontsize=16)
+for tick in ax2.xaxis.get_major_ticks():
+    tick.label.set_fontsize(14)
+for tick in ax2.yaxis.get_major_ticks():
+    tick.label.set_fontsize(14)
+ax2.tick_params(labelsize=14)
+ax2.text(0.10, 0.95, '(b)', horizontalalignment='left', verticalalignment='top',
+         transform=ax2.transAxes, fontsize=16)
+ax2.set_xlim([-50, 1050])
+
+ax3 = plt.subplot2grid((3, 1), (2, 0), colspan=1)
+ax3.plot(backgroundDict['yFRF'], backgroundDict['elevation'][:, x_check3], 'r')
+ax3.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
+ax3.set_ylabel('Elevation ($m$)', fontsize=16)
+ax3.set_title('$X=%s$' % (str(x_loc_check3)), fontsize=16)
+for tick in ax3.xaxis.get_major_ticks():
+    tick.label.set_fontsize(14)
+for tick in ax3.yaxis.get_major_ticks():
+    tick.label.set_fontsize(14)
+ax3.tick_params(labelsize=14)
+ax3.text(0.10, 0.95, '(c)', horizontalalignment='left', verticalalignment='top',
+         transform=ax3.transAxes, fontsize=16)
+ax3.set_xlim([-50, 1050])
+
+fig.subplots_adjust(wspace=0.4, hspace=0.1)
+fig.tight_layout(pad=1, h_pad=2.5, w_pad=1, rect=[0.0, 0.0, 1.0, 0.925])
+fig.savefig(os.path.join(fig_loc, fig_name), dpi=300)
+plt.close()
+
+
+# whats the deal with the related survey - make the grid just from the survey and look at it....
+
+
+t = 1
+"""
+
 
 """
 test = sb.FRFcoord(861, 200)
@@ -106,13 +364,10 @@ targetvar = 0.8 # this is the target variance used in the spline function.
 wbysmooth = 300  # y-edge smoothing scale
 wbxsmooth = 100  # x-edge smoothing scale
 # It is used in conjunction with the MSE from splineCinterp to compute the spline weights (wb)
-dSTR_s = '2011-01-01T00:00:00Z'
-dSTR_e = '2018-01-01T00:00:00Z'
+dSTR_s = '2012-01-01T00:00:00Z'
+dSTR_e = '2016-01-01T00:00:00Z'
 
-# dir_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles_gridded'
-# dir_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles'
-# dir_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles_WA'
-dir_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles2'
+dir_loc = '/home/david/BathyTroubleshooting/ncFiles'
 
 # this is where I am going to save the monthy nc files
 
@@ -418,7 +673,7 @@ plt.close()
 
 
 
-
+"""
 # ok, what we are going to do here is make a .csv file out of the .nc file of the transect
 # that Meg used in the practice code she gave us....
 
@@ -450,7 +705,7 @@ df['bottomElevation'] = elev
 df.to_csv(os.path.join(floc, fname), index=False)
 
 t = 1
-
+"""
 
 
 """
