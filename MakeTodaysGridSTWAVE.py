@@ -3,7 +3,7 @@ import netCDF4 as nc
 import numpy as np
 import sys
 import makenc
-from gridTools import gridTools
+from sblib import gridTools
 from subprocess import check_output
 
 # Select which resolution for STWAVE
