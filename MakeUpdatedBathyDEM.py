@@ -1939,8 +1939,6 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
                           This will not exist if the input data was a grid
             updateTime: 3D masked array that shows the most recent update to each bathymetry node for each time-step.
     """
-
-
     # check scalecDict and splineDict
     if scalecDict is None:
         x_smooth = 40  # scale c interp x-direction smoothing
@@ -1951,7 +1949,7 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
 
     if splineDict is None:
         splinebctype = 10
-        lc = 4
+        lc = [4, 12]
         dxm = 2
         dxi = 1
         targetvar = 0.45
@@ -1996,9 +1994,6 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
         grid = 1
         num_iter = np.shape(newZ)[0]
 
-    # show time
-
-
     # pre-allocate my netCDF dictionary variables here....
     elevation = np.empty((num_iter, rows, cols))
     tempUpTime = np.zeros((num_iter, rows, cols))
@@ -2017,7 +2012,6 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
     for tt in range(0, num_iter):
 
         if grid:
-
             # get my stuff out
             if newZ.ndim <= 2:
                 # this would mean you only handed it a 2D matrix containing ONE cbathy!!!!!!!!!!
@@ -2139,12 +2133,8 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
 
             # here is where we are going to modify the edge spline stuff AND the
             # lc for the bspline if we are starting from the background DEM
-            mod_num = 2
-            tmBackTog = False
-            if ('tmBackTog' in backgroundDict.keys()) & (tt < mod_num):
-
-                tmBackTog = True
-
+            mod_num = 3  # bumped up to take more time with longer splining scales
+            if ('tmBackTog' in backgroundDict.keys()) & (tt < mod_num) and backgroundDict['tmBackTog'] == True:
                 # what do I want to fiddle with?
                 gridInc = 100
                 lcInc = 2
@@ -2211,12 +2201,12 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
                     wbysmooth = wbysmooth - (wbysmooth % 10) + 10
 
                 # 3 - bump up lc
-                lc = lc * lcInc * (mod_num - tt)
+                lc = np.multiply(lc, lcInc) * (mod_num - tt)
                 # round to nearest 2
                 if lc >= 0:
-                    lc = lc - (lc % 2)
+                    lc = lc - np.ceil(np.divide(lc,2.))
                 else:
-                    lc = lc - (lc % 2) + 2
+                    lc = lc - np.ceil(np.divide(lc,2.)) + 2
 
 
             if surveyFilter is True:
@@ -2262,7 +2252,6 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
             updateMATi = updateMAT
 
         else:
-
             dict = {'x0': x0,  # gp.FRFcoord(x0, y0)['Lon'],  # -75.47218285,
                     'y0': y0,  # gp.FRFcoord(x0, y0)['Lat'],  #  36.17560399,
                     'x1': x1,  # gp.FRFcoord(x1, y1)['Lon'],  # -75.75004989,
@@ -2284,8 +2273,7 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
                     'Z_s': dataZ,
                     'xFRFi_vec': xFRFi_vec,  # x-positions from the full background bathy
                     'yFRFi_vec': yFRFi_vec,  # y-positions from the full background bathy
-                    'Zi': Zi,  # full background bathymetry elevations
-                    }
+                    'Zi': Zi,}  # full background bathymetry elevations
 
             out = DEM_generator(dict)
 
@@ -2305,12 +2293,9 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
             x2 = np.where(xFRFi_vec == max(xFRFn_vec))[0][0]
             y1 = np.where(yFRFi_vec == min(yFRFn_vec))[0][0]
             y2 = np.where(yFRFi_vec == max(yFRFn_vec))[0][0]
-
             Zi_s = Zi[y1:y2 + 1, x1:x2 + 1]
-
             # get the difference!!!!
             Zdiff = Zn - Zi_s
-
 
             # this is where I am going to decide if I need to bump up the edge stuff
             # what is the max of Zdiff
@@ -2349,22 +2334,20 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
                 else:
                     lc = lc - (lc % 2) + 2
             """
-
-
-            # spline time?
+            # spline time
             MSEn = np.power(MSEn, 2)
             wb = 1 - np.divide(MSEn, targetvar + MSEn)
 
             wb_dict = {'x_grid': xFRFn,
                        'y_grid': yFRFn,
                        'ax': wbxsmooth / float(max(xFRFn_vec)),
-                       'ay': wbysmooth / float(max(yFRFn_vec)),
-                       }
+                       'ay': wbysmooth / float(max(yFRFn_vec)),}
 
             wb_spline = makeWBflow2D(wb_dict)
             wb = np.multiply(wb, wb_spline)
-
+            t = DT.datetime.now()
             newZdiff = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
+            print('splining Took {} seconds'.format(DT.datetime.now() - t))
             newZn = Zi_s + newZdiff
 
             # get my new pretty splined grid
@@ -2390,8 +2373,6 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
             lc = splineDict['lc']
             wbysmooth = splineDict['wbysmooth']
             wbxsmooth = splineDict['wbxsmooth']
-
-
 
         # go ahead and stack this stuff in my new variables I am building
         elevation[tt, :, :] = newZi
@@ -2532,7 +2513,6 @@ def makeBATHYfromSurvey(d1, scalecDict=None, gridDict=None):
                 'msmoothy': y_smooth_u,  # smoothing length scale in y
                 'msmootht': 1,  # smoothing length scale in Time
                 'filterName': 'hanning',
-                # 'nmseitol': 0.75, # why did Spicer use 0.75?  Meg uses 0.25
                 'nmseitol': 0.25,
                 'grid_coord_check': 'FRF',
                 'grid_filename': '',  # should be none if creating background Grid!  becomes best guess grid
@@ -2552,9 +2532,20 @@ def makeBATHYfromSurvey(d1, scalecDict=None, gridDict=None):
 
     return returnDict
 
-
 def getSurveyData(d1, d2):
+    """
+    get the survey data from [hardcoded] local thredds server
+    :param d1: start
+    :param d2: end
+    :return: dictionary
+        :key 'elevation': bathy elevation
+        :key 'xFRF': xlocation in FRF
+        :key 'yFRF': Y location frf
+        :key 'profileNumber': profile number
+        :key 'surveyNumber': frf survey number
+        :key 'surveyTime': time of the survey
 
+    """
     # survey ncml file name
     survey_ncml = 'http://134.164.129.55/thredds/dodsC/FRF/geomorphology/elevationTransects/survey/surveyTransects.ncml'
 
