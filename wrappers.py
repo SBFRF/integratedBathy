@@ -447,15 +447,15 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
             writes ncfiles for the new DEM's to the location dir_loc
     """
     # this is the standard background bathymetry that we started from.
-    # nc_b_url = 'http://134.164.129.55/thredds/dodsC/cmtb/grids/TimeMeanBackgroundDEM/backgroundDEMt0_TimeMean.nc'
-    nc_b_url = '/home/david/BathyTroubleshooting/BackgroundFiles/backgroundDEMt0_TimeMean.nc'
+    nc_b_url = 'http://134.164.129.55/thredds/dodsC/cmtb/grids/TimeMeanBackgroundDEM/backgroundDEMt0_TimeMean.nc'
+    # nc_b_url = 'BackgroundFiles/backgroundDEMt0_TimeMean.nc'
     # this is the ncml for the cBathy ingegrated bathymetries
-    nc_url = 'FILL IN'
+    nc_url = 'http://134.164.129.55/thredds/dodsC/cmtb/integratedBathyProduct/survey/survey.ncml'
 
 
     # Yaml files for my .nc files!!!!!
-    global_yaml = '/home/david/PycharmProjects/makebathyinterp/yamls/BATHY/FRFti_global.yml'
-    var_yaml = '/home/david/PycharmProjects/makebathyinterp/yamls/BATHY/FRFti_var.yml'
+    global_yaml = 'yamls/BATHY/FRFti_global.yml'
+    var_yaml = 'yamls/BATHY/FRFti_var.yml'
 
     # check the ncStep input
     d_s = None
@@ -546,8 +546,7 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
             # background data
             backgroundDict = {}
 
-            try:
-                # look for the .nc file that I just wrote!!!
+            try:  # look for the .nc file that I just wrote!!!
                 old_bathy = nc.Dataset(os.path.join(prev_nc_loc, prev_nc_name))
                 ob_times = nc.num2date(old_bathy.variables['time'][:], old_bathy.variables['time'].units,
                                        old_bathy.variables['time'].calendar)
@@ -559,7 +558,7 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                 backgroundDict['yFRF'] = old_bathy.variables['yFRF'][:]
                 backgroundDict['updateTime'] = old_bathy.variables['updateTime'][t_idx, :]
             except:
-                try:
+                try: # if i didn't just write any, look to the thredds server to find where i last left off
                     # look for the most up to date bathy in the ncml file....
                     old_bathy = nc.Dataset(nc_url)
                     ob_times = nc.num2date(old_bathy.variables['time'][:], old_bathy.variables['time'].units,
@@ -572,13 +571,12 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                     backgroundDict['yFRF'] = old_bathy.variables['yFRF'][:]
                     backgroundDict['updateTime'] = old_bathy.variables['updateTime'][t_idx, :]
                 except:
-
                     # pull the time mean background bathymetry if you don't have any updated ones
                     old_bathy = nc.Dataset(nc_b_url)
                     backgroundDict['elevation'] = old_bathy.variables['elevation'][:]
                     backgroundDict['xFRF'] = old_bathy.variables['xFRF'][:]
                     backgroundDict['yFRF'] = old_bathy.variables['yFRF'][:]
-                    backgroundDict['tmBackTog'] = 1
+                    backgroundDict['tmBackTog'] = True
                     # it wont have an update time in this case, because it came from the time-mean background.
                     # so what should go here instead?
                     tempUpTime = np.zeros(np.shape(backgroundDict['elevation']))
@@ -605,13 +603,11 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
     
                     t = 1
                     """
-
             # go time!  this is scaleC + spline!
             out = mBATHY.makeUpdatedBATHY(backgroundDict, newDict, scalecDict=scalecDict, splineDict=splineDict)
             elevation = out['elevation']
             smoothAL = out['smoothAL']
             updateTime = out['updateTime']
-
 
             # check to see if any of the data has nan's.
             # If so that means there were not enough profile lines to create a survey.  Check for and remove them
@@ -655,9 +651,6 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                 longitude = lon
                 easting = E
                 northing = N
-
-                # ok, here is where we need to figure out what to do with updatedCells
-
                 # write the nc_file for this month, like a boss, with greatness
                 nc_dict = {}
                 nc_dict['elevation'] = elevation
@@ -671,7 +664,6 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                 nc_dict['surveyNumber'] = surveys
                 nc_dict['y_smooth'] = smoothAL
                 nc_dict['updateTime'] = updateTime
-
 
                 # what does the name need to be?
                 tempD = d1.strftime(r"%Y-%m-%d")
@@ -697,12 +689,10 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                 prev_nc_loc = nc_loc
 
                 # plot some stuff
-                if plot is None:
-                    pass
-                else:
-
-                    fig_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestFigures_Transects'
-
+                if plot is not None:
+                    fig_loc = 'figures'
+                    if not os.path.exists(fig_loc):
+                        os.makedirs(fig_loc)
                     # zoomed in pcolor plot on AOI
                     fig_name = 'transectDEM_' + tempD[0:4] + tempD[5:7] + '.png'
                     plt.figure()
