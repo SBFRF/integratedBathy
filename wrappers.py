@@ -64,8 +64,8 @@ def makeBathyCBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
     nc_url = 'FILL IN'
 
     # Yaml files for my .nc files!!!!!
-    global_yaml = 'C:\Users\dyoung8\PycharmProjects\makebathyinterp\yamls\BATHY\FRFti_global.yml'
-    var_yaml = 'C:\Users\dyoung8\PycharmProjects\makebathyinterp\yamls\BATHY\FRFti_grid_var.yml'
+    global_yaml = 'yamls\BATHY\FRFti_global.yml'
+    var_yaml = 'yamls\BATHY\FRFti_grid_var.yml'
 
     # check the ncStep input
     d_s = None

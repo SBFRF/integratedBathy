@@ -20,10 +20,10 @@ targetvar = 0.25 # this is the target variance used in the spline function.
 wbysmooth = 300  # y-edge smoothing scale
 wbxsmooth = 100  # x-edge smoothing scale
 # It is used in conjunction with the MSE from splineCinterp to compute the spline weights (wb)
-dSTR_s = '2015-09-14T00:00:00Z'
-dSTR_e = '2015-11-01T00:00:00Z'
+dSTR_s = '2014-01-01T00:00:00Z'
+dSTR_e = '2018-01-01T00:00:00Z'
 
-dir_loc = '/home/number/Public'
+dir_loc = '/home/number/thredds_data/integratedBathyProduct/survey'
 
 # this is where I am going to save the monthy nc files
 
@@ -38,6 +38,7 @@ splineDict['dxi'] = dxi
 splineDict['targetvar'] = targetvar
 splineDict['wbysmooth'] = wbysmooth
 splineDict['wbxsmooth'] = wbxsmooth
+wrappers.makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=scalecDict, splineDict=splineDict)
 
 # wrappers.makeBathyCBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=scalecDict, splineDict=splineDict)
 for xx in [20]:
