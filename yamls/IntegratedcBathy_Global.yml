@@ -1,11 +1,9 @@
 featureType: grid
-title: todays grid - CMS
+title: cBathy Bathymetry grid
 summary: >
  This is today's gridded bathymetry.  This is created for use in the Coastal Model Test bed.  this is an evolving
  grid updated with the most recent bathymetry that are measured using the FRF monthly surveys if not more often
- during projects.  User must be aware that positional coordinate error grows with distance from FRF origin, due to
- assumptions made in coordinate conversions.  Coordinate locations are centric to cell,  This is converted from origin
- being located at vertex of cell.  All values reported are centric to cell center. elevations are positive down
+ during projects.  This is made from Argus cBathy output
 history: file made locally 
 source: file made locally
 sourceUrl: (local files)
@@ -17,7 +15,7 @@ creator_name: USACE/CHL/COAB
 creator_url: http://frf.usace.army.mil
 creator_email: frfwebmaster@usace.army.mil
 license: >
-  These data may be redistributed and used without restriction.
+  These data may be redistributed and used without restriction. .
   Data are intended for scholarly use by the research community,
   with the express agreement that users will properly acknowledge
   the USACE Field Research Facility and the supporting investigator(s).
@@ -54,22 +52,19 @@ geospatial_vertical_units: m
 geospatial_vertical_resolution: 0
 geospatial_vertical_min: 0
 geospatial_vertical_max: 0
-geospatial_vertical_origin: NAVD88
+geospatial_vertical_origin: sea surface
 geospatial_lat_min:
 geospatial_lat_max:
 geospatial_lat_units: degrees_north
 geospatial_lon_min:
 geospatial_lon_max:
 geospatial_lon_units: degrees_east
-geospatial_vertical_positive: down
+geospatial_vertical_positive: up
 time_coverage_start: '2015-09-18T22:00:00Z'
 time_coverage_end: '2015-09-18T22:00:00Z'
 deployment_start: '2015-09-18T22:00:00Z'
-platform: Coastal Model Test Bed
-cross_shore_angle_units: degrees from true North
-cross_shore_angle_description: cross shore angle at the USACE FRF site in DUCK, NC, clockwise from true north in Lat/lon
+platform: Model Test Bed
+instrument:
+cross_shore_angle_units:
+cross_shore_angle_description: cross shore angle at the USACE FRF site in DUCK, NC, clockwise from true north
 cross_shore_angle: 71.8
-dX: variable
-dY: variable
-ni: 366
-nj: 386

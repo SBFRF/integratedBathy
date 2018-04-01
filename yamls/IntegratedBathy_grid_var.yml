@@ -1,4 +1,4 @@
-_variables: ['time', 'xFRF', 'yFRF', 'latitude', 'longitude', 'elevation', 'surveyNumber', 'y_smooth',  'updateTime']
+_variables: ['time', 'xFRF', 'yFRF', 'latitude', 'longitude', 'elevation', 'y_smooth',  'updateTime']
 _attributes: ['notes']
 _dimensions: ['time', 'yFRF', 'xFRF']
 
@@ -73,17 +73,6 @@ longitude:
     fill_value: '-999'
     short_name: 'lon'
     notes: 'Longitude of the bathymetry nodes in decimal degrees'
-
-surveyNumber:
-    name: 'surveyNumber'
-    units: ''
-    long_name: 'The most recent survey incorporated into the bathymetry at this index'
-    data_type: 'f8'
-    dim: ['time']
-    fill_value: '-999'
-    short_name: 'surveyNum'
-    coordinates: ''
-    description: 'The number of the most recent survey incorporated into the bathymetry at this index'
 
 y_smooth:
     name: 'y_smooth'

@@ -12,11 +12,8 @@ import pandas as pd
 from getdatatestbed import getDataFRF
 from scipy.interpolate import griddata
 
-
-
 def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, plot=None):
     """
-
     :param dSTR_s: string that determines the start date of the times of the surveys you want to use to update the DEM
                     format is  dSTR_s = '2013-01-04T00:00:00Z'
                     no matter what you put here, it will always round it down to the beginning of the month
@@ -75,7 +72,7 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
     5. stacks all surveys for the month into one .nc file and writes it,
         also creates QA/QC plots of the last survey in the month if desired
     """
-
+    raise StandardError('Depricated, 3/31/18')
     #HARD CODED VARIABLES!!!
     filelist = ['http://134.164.129.55/thredds/dodsC/FRF/geomorphology/elevationTransects/survey/surveyTransects.ncml']
     # this is just the location of the ncml for the transects!!!!!
@@ -780,7 +777,6 @@ def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineD
                 plt.savefig(os.path.join(fig_loc, fig_name))
                 plt.close()
 
-
 def subgridBounds(surveyDict, gridDict, xMax=1000, maxSpace=149):
     """
     # this function determines the bounds of the subgrid we are going to generate from the trasect data
@@ -808,7 +804,6 @@ def subgridBounds(surveyDict, gridDict, xMax=1000, maxSpace=149):
     :return:
         dictionary containing the coordinates of
     """
-
     dataX = surveyDict['dataX']
     dataY = surveyDict['dataY']
     profNum = surveyDict['profNum']
@@ -987,7 +982,6 @@ def subgridBounds(surveyDict, gridDict, xMax=1000, maxSpace=149):
 
     return out
 
-
 def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, splineDict=None, plot=None):
     """
 
@@ -1045,7 +1039,7 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, sp
     5. stacks all surveys for the month into one .nc file and writes it,
         also creates QA/QC plots of the last survey in the month if desired
     """
-
+    raise SystemError('This is a depricated function. use makeupdatedbathy')
     # HARD CODED VARIABLES!!!
     # background_url = 'http://134.164.129.62:8080/thredds/dodsC/CMTB/grids/UpdatedBackgroundDEM/UpdatedBackgroundDEM.ncml'
     # this is just the location of the ncml for the already created UpdatedDEM
@@ -1466,7 +1460,6 @@ def makeUpdatedBATHY_grid(dSTR_s, dSTR_e, dir_loc, ncml_url, scalecDict=None, sp
                 plt.savefig(os.path.join(fig_loc, fig_name))
                 plt.close()
 
-
 def getGridded(ncml_url, d1, d2):
 
     """
@@ -1543,7 +1536,6 @@ def getGridded(ncml_url, d1, d2):
         pass
 
     return out
-
 
 def subgridBounds2(surveyDict, gridDict, xMax=1290, maxSpace=149, surveyFilter=False):
     """
@@ -1865,79 +1857,67 @@ def subgridBounds2(surveyDict, gridDict, xMax=1290, maxSpace=149, surveyFilter=F
 
     return out
 
-
 def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
     """
-
     :param backgroundDict: keys are:
-                        elevation - 2D matrix containing the elevations at every node for
-                                    whatever my background is supposed to be for this run
-                        xFRF - 1D array of xFRF positions corresponding to the second dimension of elevation
-                        yFRF - 1D array of yFRF positions corresponding to the first dimension of elevation
-                        updateTime - 2D masked array that contains the most recent update
-                                     to each node in the background bathymetry for this time step.
-    :param newDict: keys are:
-                        elevation - this will probably either be a 1D array of elevations from a survey or a 3D array of
-                                    elevations where the first dimension is time and the next two are y and X, respectively.
-                                    If it gets a 2D array it assumes it is a gridded bathymetry with only one time.
-                        xFRF - this will either be a 1D array of x-values corresponding to the points of the survey,
-                               a 1D array corresponding to the x dimension of elevation, or a 2D array that is a
-                               meshgrid of the x-values corresponding to the elevations.
-                               The script should be smart enough to tell which type of 1D array it is.
-                        yFRF - this will either be a 1D array of y-values corresponding to the points of the survey,
-                               a 1D array corresponding to the y dimension of elevation, or a 2D array that is a
-                               meshgrid of the y-values corresponding to the elevations.
-                               The script should be smart enough to tell which type of 1D array it is.
-                        surveyNumber - these are the survey numbers of every point in the survey
-                                       (so one for every point in elevation if elevation comes from survey data).
-                                       This is not required if the new data is gridded
-                        profileNumber - these are the profile numbers of every point in the survey
-                                       (so one for every point in elevation if elevation comes from survey data).
-                                       This is not required if the new data is gridded
-    :param scalecDict: keys are:
-                        x_smooth - x direction smoothing length for scalecInterp
-                        y_smooth - y direction smoothing length for scalecInterp
+        :key elevation: 2D matrix containing the elevations at every node for
+                         whatever my background is supposed to be for this run
+        :key xFRF: 1D array of xFRF positions corresponding to the second dimension of elevation
+        :key yFRF: 1D array of yFRF positions corresponding to the first dimension of elevation
+        :key updateTime: 2D masked array that contains the most recent update to each node in the
+                        background bathymetry for this time step.
 
-                        if not specified it will default to:
-                        x_smooth = 100
-                        y_smooth = 200
-    :param splineDict: keys are:
-                        splinebctype
-                            options are....
-                            2 - second derivative goes to zero at boundary
-                            1 - first derivative goes to zero at boundary
-                            0 - value is zero at boundary
-                            10 - force value and derivative(first?!?) to zero at boundary
-                        lc - spline smoothing constraint value (integer <= 1)
-                        dxm -  coarsening of the grid for spline (e.g., 2 means calculate with a dx that is 2x input dx)
+    :param newDict: new input data dictionary
+        :key elevation: this will probably either be a 1D array of elevations from a survey or a 3D array of
+                         elevations where the first dimension is time and the next two are y and X, respectively.
+                         If it gets a 2D array it assumes it is a gridded bathymetry with only one time.
+        :key xFRF:  this will either be a 1D array of x-values corresponding to the points of the survey,
+                     a 1D array corresponding to the x dimension of elevation, or a 2D array that is a
+                     meshgrid of the x-values corresponding to the elevations.
+                     The script should be smart enough to tell which type of 1D array it is.
+        :key yFRF: this will either be a 1D array of y-values corresponding to the points of the survey,
+                     a 1D array corresponding to the y dimension of elevation, or a 2D array that is a
+                     meshgrid of the y-values corresponding to the elevations.
+                     The script should be smart enough to tell which type of 1D array it is.
+        :key surveyNumber: these are the survey numbers of every point in the survey
+                     (so one for every point in elevation if elevation comes from survey data).
+                     This is not required if the new data is gridded
+        :key profileNumber: these are the profile numbers of every point in the survey
+                     (so one for every point in elevation if elevation comes from survey data).
+                     This is not required if the new data is gridded
+
+    :param scalecDict: Interpolation controld dictionary
+        :key x_smooth: (default=40)  x direction smoothing length for scalecInterp
+        :key y_smooth: (default=100)  y direction smoothing length for scalecInterp
+
+    :param splineDict: spline control dictionary
+        :key 'splinebctype': (default=10) control how to tie in the spline
+                    2 - second derivative goes to zero at boundary
+                    1 - first derivative goes to zero at boundary
+                    0 - value is zero at boundary
+                    10 - force value and derivative(first) to zero at boundary
+        :key lc:  (default=4) spline smoothing constraint value (integer <= 1) can be
+        :key dxm: (default=2) coarsening of the grid for spline (e.g., 2 means calculate with a dx that is 2x input dx)
                                 can be tuple if you want to do dx and dy separately (dxm, dym), otherwise dxm is used for both
-                        dxi - fining of the grid for spline (e.g., 0.1 means return spline on a grid that is 10x input dx)
+        :key dxi: (default=1) fining of the grid for spline (e.g., 0.1 means return spline on a grid that is 10x input dx)
                                 as with dxm, can be a tuple if you want separate values for dxi and dyi
-                        targetvar - this is the target variance used in the spline function.
-                        wbysmooth - y-edge smoothing length scale
-                        wbxsmooth - x-edge smoothing length scale
+        :key targetvar: (default 0.45) this is the target variance used in the spline function.
+        :key wbysmooth: (default=300) y-edge smoothing length scale [meters]
+        :key wbxsmooth: (default=100) x-edge smoothing length scale [meters]
 
-                        if not specified it will default to:
-                        splinebctype = 10
-                        lc = 4
-                        dxm = 2
-                        dxi = 1
-                        targetvar = 0.45
-                        wbysmooth = 300
-                        wbxsmooth = 100
-    :return:
-            out:
-            keys are:
-            elevation: will always be a 3D array, first dim either corresponds to each survey number
-                       or the first dimension of the input elevation data and the second
+    :return: dictionary output
+        :key 'elevation': will always be a 3D array, first dim either corresponds to each survey number
+                       or the first dimension of the gridded input elevation data [time] and the second
                        two dimensions the same size as backgroundDict['evelation']
-            smoothAL: 1D array corresponding to the smoothing scale used for each grid
+        :key 'smoothAL':  1D array corresponding to the smoothing scale used for each grid
                       (they will all be identical if using gridded data because there is no mechanism to change it)
-            xFRF:   exact same as backgroundDict['xFRF']
-            yFRF:   exact same as backgroundDict['xFRF']
-            surveyNumber: 1D array corresponding to the survey numbers for each grid.
-                          This will not exist if the input data was a grid
-            updateTime: 3D masked array that shows the most recent update to each bathymetry node for each time-step.
+        :key 'xFRF': x coords in FRF for output elevation
+        :key 'yFRF': y coords in FRF for output elevation
+        :key 'updateTime': 3D masked array that shows the most recent update to each bathymetry node for each time-step.
+        :key MSRi': Mean square residual estimates from scale C interpolation code
+        :key 'NMSEi': normalized mean square error estimates from scale C interpolation codes
+        :key 'MSEi': Mean square error estimates from scale C interpolation code
+        :key 'surveyNumber': optional for survey transects only, 1D array corresponding to the survey numbers for each grid.
     """
     # check scalecDict and splineDict
     if scalecDict is None:
@@ -1970,6 +1950,8 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
     xFRFi_vec = backgroundDict['xFRF']
     yFRFi_vec = backgroundDict['yFRF']
     updateMAT = backgroundDict['updateTime']
+    if updateMAT.ndim >2:
+        raise IndexError('too many dims!')
     # read out the dx and dy of the background grid!!!
     # assume this is constant grid spacing!!!!!
     dx = abs(xFRFi_vec[1] - xFRFi_vec[0])
@@ -1985,36 +1967,34 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
     # check number of dimensions of dataZ
     if newZ.ndim <= 1:
         # this is survey data
-        grid = 0
+        gridFlag = False
         survNum = newDict['surveyNumber']
         surveyList = np.unique(survNum)
         profNum = newDict['profileNumber']
         num_iter = len(surveyList)
     else:
-        grid = 1
-        num_iter = np.shape(newZ)[0]
+        gridFlag = True
+        if newZ.ndim == 3:
+            num_iter = np.shape(newZ)[0]
+        else:
+            raise NotImplementedError('Untested single 2D grid, will probably break')
 
     # pre-allocate my netCDF dictionary variables here....
     elevation = np.empty((num_iter, rows, cols))
+    MSEi, MSRi, NMSEi = np.zeros_like(elevation), np.zeros_like(elevation), np.zeros_like(elevation)
     tempUpTime = np.zeros((num_iter, rows, cols))
     tempUpTime[:] = np.nan
     updateTime = np.ma.array(tempUpTime, mask=np.ones(np.shape(elevation)), fill_value=-999)
     smoothAL = np.empty(num_iter)
     elevation[:] = np.nan
     smoothAL[:] = np.nan
+    surveyNumber = np.zeros(num_iter)  #initialize variable for survey data, won't be used for gridded input
 
-
-    if grid:
-        pass
-    else:
-        surveyNumber = np.zeros(num_iter)
-
-    for tt in range(0, num_iter):
-
-        if grid:
+    for tt in range(0, num_iter):  # break into number
+        if gridFlag:  # this is gridded input data
             # get my stuff out
             if newZ.ndim <= 2:
-                # this would mean you only handed it a 2D matrix containing ONE cbathy!!!!!!!!!!
+                # this would mean you only handed it a 2D matrix containing ONE grid
                 zV = newZ
             else:
                 zV = newZ[tt, :, :]
@@ -2027,7 +2007,6 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
             else:
                 # just a 1D array, turn it into a meshgrid
                 xV, yV = np.meshgrid(newX, newY)
-
 
             # what are my subgrid bounds?
             x0 = np.max(xV)
@@ -2088,8 +2067,7 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
             # specify y_smoothing
             y_smooth_u = y_smooth
 
-        else:
-
+        else:  # this is survey profiles
             # get the times of each survey
             ids = (survNum == surveyList[tt])
 
@@ -2100,16 +2078,8 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
             dataZ = newZ[ids]
 
             # what are my subgrid bounds?
-            surveyDict = {}
-            surveyDict['dataX'] = dataX
-            surveyDict['dataY'] = dataY
-            surveyDict['profNum'] = profNum[ids]
-
-            gridDict = {}
-            gridDict['dx'] = dx
-            gridDict['dy'] = dy
-            gridDict['xFRFi_vec'] = xFRFi_vec
-            gridDict['yFRFi_vec'] = yFRFi_vec
+            surveyDict = {'dataX':dataX, 'dataY':dataY, 'profNum':profNum[ids]}
+            gridDict = {'dx': dx, 'dy': dy, 'xFRFi_vec': xFRFi_vec, 'yFRFi_vec': yFRFi_vec}
 
             # temp = subgridBounds(surveyDict, gridDict, maxSpace=249)
             maxSpace = 249
@@ -2117,10 +2087,8 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
             temp = subgridBounds2(surveyDict, gridDict, maxSpace=maxSpace, surveyFilter=surveyFilter)
 
             if temp['x0'] is None:
-                print 'Survey %s was not included because there were too few profile lines spaced too far apart.' % str(surveyList[tt])
+                print('Survey %s was not included because there were too few profile lines spaced too far apart.' % str(surveyList[tt]))
                 continue
-            else:
-                pass
 
             x0 = temp['x0']
             x1 = temp['x1']
@@ -2208,7 +2176,6 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
                 else:
                     lc = lc - np.ceil(np.divide(lc,2.)) + 2
 
-
             if surveyFilter is True:
                 # throw out all points in the survey that are outside of these bounds!!!!
                 test1 = np.where(dataX <= xS0, 1, 0)
@@ -2243,27 +2210,24 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
                 pass
 
             del temp
-
-        # ok, now it should be on to DEM generator at this point?
-        # I think the only difference after this will be if I return the survey number or not?
+        ################################
+        # prep data for DEM generation #
+        ################################
         # if you wound up throwing out this survey!!!
         if x0 is None:
             newZi = Zi
             updateMATi = updateMAT
-
         else:
             dict = {'x0': x0,  # gp.FRFcoord(x0, y0)['Lon'],  # -75.47218285,
                     'y0': y0,  # gp.FRFcoord(x0, y0)['Lat'],  #  36.17560399,
                     'x1': x1,  # gp.FRFcoord(x1, y1)['Lon'],  # -75.75004989,
                     'y1': y1,  # gp.FRFcoord(x1, y1)['Lat'],  #  36.19666112,
-                    'lambdaX': dx,
-                    # grid spacing in x  -  Here is where CMS would hand array of variable grid spacing
+                    'lambdaX': dx, # grid spacing in x  -  Here is where CMS would hand array of variable grid spacing
                     'lambdaY': dy,  # grid spacing in y
                     'msmoothx': x_smooth,  # smoothing length scale in x
                     'msmoothy': y_smooth_u,  # smoothing length scale in y
                     'msmootht': 1,  # smoothing length scale in Time
                     'filterName': 'hanning',
-                    # 'nmseitol': 0.75, # why did Spicer use 0.75?  Meg uses 0.25
                     'nmseitol': 0.25,
                     'grid_coord_check': 'FRF',
                     'grid_filename': '',  # should be none if creating background Grid!  becomes best guess grid
@@ -2277,11 +2241,9 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
 
             out = DEM_generator(dict)
 
-            # read some stuff from this dict like a boss
+            # unpack dictionary output
             Zn = out['Zi']
             MSEn = out['MSEi']
-            MSRn = out['MSRi']
-            NMSEn = out['NMSEi']
             xFRFn_vec = out['x_out']
             yFRFn_vec = out['y_out']
 
@@ -2294,13 +2256,9 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
             y1 = np.where(yFRFi_vec == min(yFRFn_vec))[0][0]
             y2 = np.where(yFRFi_vec == max(yFRFn_vec))[0][0]
             Zi_s = Zi[y1:y2 + 1, x1:x2 + 1]
+
             # get the difference!!!!
             Zdiff = Zn - Zi_s
-
-            # this is where I am going to decide if I need to bump up the edge stuff
-            # what is the max of Zdiff
-            test = np.max(np.abs(Zdiff))
-            t = 1
             """
             # this conditional checks to see if I ALREADY changed the spline due to it being the first two surveys
             # implemented, then checks the maximum allowable zdiff
@@ -2334,7 +2292,9 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
                 else:
                     lc = lc - (lc % 2) + 2
             """
-            # spline time
+            #################################################
+            # spline time                                   #
+            #################################################
             MSEn = np.power(MSEn, 2)
             wb = 1 - np.divide(MSEn, targetvar + MSEn)
 
@@ -2354,9 +2314,9 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
             newZi = Zi.copy()
             newZi[y1:y2 + 1, x1:x2 + 1] = newZn
 
-            # we also want to create and store a variable for the last time this was updated.
+            # create and store a variable for the last time this was updated.
             updateMATi = updateMAT.copy()
-            updateMATi[y1:y2 + 1, x1:x2 + 1] = np.ma.array(newDict['surveyMeanTime'][tt]*np.ones(np.shape(newZn)), mask=np.zeros(np.shape(newZn)), fill_value=-999)
+            updateMATi[y1:y2 + 1, x1:x2 + 1] = np.ma.array(newDict['surveyMeanTime']*np.ones(np.shape(newZn)), mask=np.zeros(np.shape(newZn)), fill_value=-999)
 
         # update Zi for next iteration
         del Zi
@@ -2377,29 +2337,31 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
         # go ahead and stack this stuff in my new variables I am building
         elevation[tt, :, :] = newZi
         updateTime[tt, :, :] = updateMATi
+        # get errors out
+        MSRi[tt, y1:y2 + 1, x1:x2 + 1] = out['MSRi']
+        NMSEi[tt, y1:y2 + 1, x1:x2 + 1] = out['NMSEi']
+        MSEi[tt, y1:y2 + 1, x1:x2 + 1] = out['MSEi']
         smoothAL[tt] = y_smooth_u
-        if grid:
-            pass
-        else:
+        if gridFlag != True:
             surveyNumber[tt] = np.unique(survNum)[0]
-
-    # go ahead and return my dictionary
-    out = {}
-    out['elevation'] = elevation
-    out['smoothAL'] = smoothAL
-    out['xFRF'] = xFRFi_vec
-    out['yFRF'] = yFRFi_vec
-    out['updateTime'] = updateTime
-
-    if grid:
-        pass
-    else:
-        out['surveyNumber'] = surveyNumber
-    return out
-
+    ####################################################
+    # build output dictionary (include Error estimates)#
+    ####################################################
+    output = {'elevation':  elevation,
+              'smoothAL':   smoothAL,
+              'xFRF':       xFRFi_vec,
+              'yFRF':       yFRFi_vec,
+              'updateTime': updateTime,
+              'MSRi':       MSRi,
+              'NMSEi':      NMSEi,
+              'MSEi':       MSEi}
+    if gridFlag != True:
+        output['surveyNumber'] = surveyNumber
+    return output
 
 def makeBATHYfromSurvey(d1, scalecDict=None, gridDict=None):
 
+    raise SystemError('This code is depricated (or update and document usage 3/31/18')
     # check scalecDict
     if scalecDict is None:
         x_smooth = 100  # scale c interp x-direction smoothing

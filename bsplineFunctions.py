@@ -143,7 +143,7 @@ def bspline_pertgrid(Zi, w, splinebctype=0, lc=4, dxm=2, dxi=1):
             id = np.where(((~np.isnan(Zi[:, ii])) & (w[:, ii] > fac)))
             ztmp = ztmp0
             ztmp[id] = Zi[id, ii]
-            temp = bspline_compute(y, ztmp, w[:, ii], ym, dym, lcx, splinebctype[1])
+            temp = bspline_compute(y, ztmp, w[:, ii], ym, dym, lcy, splinebctype[1])
             am = temp['am']
             aci = temp['aci']
             J = temp['J']
@@ -168,18 +168,17 @@ def bspline_pertgrid(Zi, w, splinebctype=0, lc=4, dxm=2, dxi=1):
         y = ym
         Ny = len(ym)
 
-
-    # now run the spline along the x-direction
+    # now run the spline along the cross-shore direction
     Zprime = np.zeros((Ny, Nxi))
     ztmp0 = np.zeros(np.shape(Zi[0, :]))
     fac = np.finfo(float).eps
 
     for ii in range(0, Ny):
-        # run spline
+        # run spline in cross shore
         id = np.where(((~np.isnan(Zi[ii, :])) & (w[ii, :] > fac)))
         ztmp = ztmp0
         ztmp[id] = Zi[ii, id]
-        temp = bspline_compute(np.transpose(x), np.transpose(ztmp), np.transpose(w[ii, :]), xm, dxm, lcy, splinebctype[0])
+        temp = bspline_compute(np.transpose(x), np.transpose(ztmp), np.transpose(w[ii, :]), xm, dxm, lcx, splinebctype[0])
         # check to see if we are also forcing boundary
         am = temp['am']
         if fix_ends[0]:

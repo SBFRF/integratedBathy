@@ -513,8 +513,8 @@ def  makenc_todaysBathyCMTB(gridDict, ofname, globalYaml, varYaml):
 def makenc_CSHORErun(ofname, dataDict, globalYaml, varYaml):
     """
        This is a function that makes netCDF files from CSHORE model runs created by
-       David Young using all the stuff Spicer Bak used. You have to build dataDict from the different dictionaries
-       output by cshore_io.load_CSHORE_results().  YOU DONT HAVE TO HAND IT LAT LON THOUGH!!!
+       David Young using all the stuff Spicer Bak used. You have to build dataDict
+       from the different dictionaries output by cshore_io.load_CSHORE_results().
 
        :param dataDict:
                 keys:
@@ -543,9 +543,9 @@ def makenc_CSHORErun(ofname, dataDict, globalYaml, varYaml):
                 ['profileNumber']
                 ['bathymetryDate']
                 ['yFRF']
-       :param ofname:
-       :param globalYaml:
-       :param varYaml:
+       :param ofname: ouput file name
+       :param globalYaml: global yaml file name
+       :param varYaml: variable yaml file name
 
        :return: netCDF file with CSHORE model results in it
        """
