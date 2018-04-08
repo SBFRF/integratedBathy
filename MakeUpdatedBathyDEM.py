@@ -1921,7 +1921,7 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
     """
     # check scalecDict and splineDict
     if scalecDict is None:
-        x_smooth = 40  # scale c interp x-direction smoothing
+        x_smooth = 20  # scale c interp x-direction smoothing
         y_smooth = 100  # scale c interp y-direction smoothing
     else:
         x_smooth = scalecDict['x_smooth']  # scale c interp x-direction smoothing
@@ -1999,6 +1999,9 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
             else:
                 zV = newZ[tt, :, :]
 
+            if np.isclose(999.99, zV, rtol=.1).all():
+                continue # move to the next one if it's all 999 - ran into issues with fill values
+
             # were you handed a 2D array of X's and Y's or a 1D vector corresponding to that dimension?
             if np.size(zV) == np.size(newX):
                 # must have been handed a meshgrid
@@ -2043,20 +2046,12 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
             # if so, truncate so that it does not exceed.
             if x0 > max(xFRFi_vec):
                 x0 = max(xFRFi_vec)
-            else:
-                pass
             if x1 < min(xFRFi_vec):
                 x1 = min(xFRFi_vec)
-            else:
-                pass
             if y0 > max(yFRFi_vec):
                 y0 = max(yFRFi_vec)
-            else:
-                pass
             if y1 < min(yFRFi_vec):
                 y1 = min(yFRFi_vec)
-            else:
-                pass
 
             #reshape it to pass to DEM generator
             dataX, dataY, dataZ = [], [], []
@@ -2117,20 +2112,13 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
                 # if so, truncate so that it does not exceed.
                 if x0 > max(xFRFi_vec):
                     x0 = max(xFRFi_vec)
-                else:
-                    pass
                 if x1 < min(xFRFi_vec):
                     x1 = min(xFRFi_vec)
-                else:
-                    pass
                 if y0 > max(yFRFi_vec):
                     y0 = max(yFRFi_vec)
-                else:
-                    pass
                 if y1 < min(yFRFi_vec):
                     y1 = min(yFRFi_vec)
-                else:
-                    pass
+
                 # round it to nearest dx or dy
                 # minX
                 if x1 >= 0:
@@ -2218,28 +2206,28 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
             newZi = Zi
             updateMATi = updateMAT
         else:
-            dict = {'x0': x0,  # gp.FRFcoord(x0, y0)['Lon'],  # -75.47218285,
-                    'y0': y0,  # gp.FRFcoord(x0, y0)['Lat'],  #  36.17560399,
-                    'x1': x1,  # gp.FRFcoord(x1, y1)['Lon'],  # -75.75004989,
-                    'y1': y1,  # gp.FRFcoord(x1, y1)['Lat'],  #  36.19666112,
-                    'lambdaX': dx, # grid spacing in x  -  Here is where CMS would hand array of variable grid spacing
-                    'lambdaY': dy,  # grid spacing in y
-                    'msmoothx': x_smooth,  # smoothing length scale in x
-                    'msmoothy': y_smooth_u,  # smoothing length scale in y
-                    'msmootht': 1,  # smoothing length scale in Time
-                    'filterName': 'hanning',
-                    'nmseitol': 0.25,
-                    'grid_coord_check': 'FRF',
-                    'grid_filename': '',  # should be none if creating background Grid!  becomes best guess grid
-                    'data_coord_check': 'FRF',
-                    'xFRF_s': dataX,
-                    'yFRF_s': dataY,
-                    'Z_s': dataZ,
-                    'xFRFi_vec': xFRFi_vec,  # x-positions from the full background bathy
-                    'yFRFi_vec': yFRFi_vec,  # y-positions from the full background bathy
-                    'Zi': Zi,}  # full background bathymetry elevations
+            interpDict = {'x0': x0,
+                          'y0': y0,
+                          'x1': x1,
+                          'y1': y1,
+                          'lambdaX': dx, # grid spacing in x
+                          'lambdaY': dy,  # grid spacing in y
+                          'msmoothx': x_smooth,  # smoothing length scale in x
+                          'msmoothy': y_smooth_u,  # smoothing length scale in y
+                          'msmootht': 1,  # smoothing length scale in Time
+                          'filterName': 'hanning',
+                          'nmseitol': 0.25,
+                          'grid_coord_check': 'FRF',
+                          'grid_filename': '',  # should be none if creating background Grid!  becomes best guess grid
+                          'data_coord_check': 'FRF',
+                          'xFRF_s': dataX,
+                          'yFRF_s': dataY,
+                          'Z_s': dataZ,
+                          'xFRFi_vec': xFRFi_vec,  # x-positions from the full background bathy
+                          'yFRFi_vec': yFRFi_vec,  # y-positions from the full background bathy
+                          'Zi': Zi,}  # full background bathymetry elevations
 
-            out = DEM_generator(dict)
+            out = DEM_generator(interpDict)
 
             # unpack dictionary output
             Zn = out['Zi']
@@ -2259,39 +2247,6 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
 
             # get the difference!!!!
             Zdiff = Zn - Zi_s
-            """
-            # this conditional checks to see if I ALREADY changed the spline due to it being the first two surveys
-            # implemented, then checks the maximum allowable zdiff
-            maZdiff = 1  # maximum allowable Zdiff?
-            if (not tmBackTog) & (np.max(np.abs(Zdiff)) >= maZdiff):
-
-                # what do I want to fiddle with?
-                lcInc = 4
-                wbSmoothInc = 4
-
-                # 1 - bump up the edge spline?
-                wbysmooth = wbysmooth * wbSmoothInc
-                wbxsmooth = wbxsmooth * wbSmoothInc
-                # round to nearest 10
-                # wbxsmooth
-                if wbxsmooth >= 0:
-                    wbxsmooth = wbxsmooth - (wbxsmooth % 10)
-                else:
-                    wbxsmooth = wbxsmooth - (wbxsmooth % 10) + 10
-                # wbysmooth
-                if wbysmooth >= 0:
-                    wbysmooth = wbysmooth - (wbysmooth % 10)
-                else:
-                    wbysmooth = wbysmooth - (wbysmooth % 10) + 10
-
-                # 2 - bump up lc
-                lc = lc * lcInc
-                # round to nearest 2
-                if lc >= 0:
-                    lc = lc - (lc % 2)
-                else:
-                    lc = lc - (lc % 2) + 2
-            """
             #################################################
             # spline time                                   #
             #################################################
@@ -2303,8 +2258,8 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
                        'ax': wbxsmooth / float(max(xFRFn_vec)),
                        'ay': wbysmooth / float(max(yFRFn_vec)),}
 
-            wb_spline = makeWBflow2D(wb_dict)
-            wb = np.multiply(wb, wb_spline)
+            wb_spline = makeWBflow2D(wb_dict)  # this produces the 2D shape of the normalized weights for the spline
+            wb = np.multiply(wb, wb_spline)    # brings in the error estimates from the interpolation
             t = DT.datetime.now()
             newZdiff = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
             print('splining Took {} seconds'.format(DT.datetime.now() - t))
