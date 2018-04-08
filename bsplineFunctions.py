@@ -88,7 +88,6 @@ def bspline_pertgrid(Zi, w, splinebctype=0, lc=4, dxm=2, dxi=1):
         else:
             pass
 
-
     # input grid
     dx = 1
     x = np.arange(1, Nx+dx, dx)

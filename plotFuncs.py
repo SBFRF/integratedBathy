@@ -45,7 +45,7 @@ def bathyQAQCplots(fig_loc, d1, updatedBathy):
         idxYshore_smo = np.argmin(np.abs(xFRF - val))
         plt.plot(yFRF, updatedBathy['elevation'][t, :, idxYshore_smo], '.', label='x={}'.format(val))
 
-    plt.xlim([-10, 1200])
+    plt.xlim([-10, 1800])
     plt.legend()
     plt.savefig(os.path.join(fig_loc, fname2))
     plt.close()

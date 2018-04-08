@@ -153,13 +153,17 @@ def makeBathyCBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
             fig_loc = 'figures/cbathy'
         # put old/background data into dictionary, decide where to get background data from
         backgroundDict = {}
+        assert nc.num2date(go.epochd1, 'seconds since 1970-01-01') == d1, 'the below logic assumes d1 == epochd1'
+
         try:
             # look for the .nc file that I just wrote!!! (if more than 1st of loop)
             old_bathy = nc.Dataset(os.path.join(prev_nc_loc, prev_nc_name))
-            ob_times = nc.num2date(old_bathy.variables['time'][-1], old_bathy.variables['time'].units,
-                                   old_bathy.variables['time'].calendar)
-            # find newest time prior to this
-            t_mask = (ob_times <= d1)  # boolean true/false of time
+            # ob_times = nc.num2date(old_bathy.variables['time'][-1], old_bathy.variables['time'].units,
+            #                        old_bathy.variables['time'].calendar)
+            ob_times = sb.baseRound(old_bathy['time'][:], base=60*30) # round to nearest 30 minutes
+
+            # # find newest time prior to this
+            t_mask = (ob_times <= go.epochd1)  # boolean true/false of time
             t_idx = np.where(t_mask)[0][-1]  # I want the MOST RECENT ONE - i.e., the last one
             # backgroundDict['elevation'] = old_bathy.variables['elevation'][t_idx, :]
             # backgroundDict['xFRF'] = old_bathy.variables['xFRF'][:]
@@ -169,23 +173,28 @@ def makeBathyCBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
             try:
                 # look for the most up to date bathy in the ncml file....
                 old_bathy = nc.Dataset(nc_url)
-                ob_times = nc.num2date(old_bathy.variables['time'][:], old_bathy.variables['time'].units,
-                                       old_bathy.variables['time'].calendar)
-                # find newest time prior to this
-                t_mask = (ob_times <= d1)  # boolean true/false of time
-                t_idx = np.where(t_mask)[0][-1]  # I want the MOST RECENT ONE - i.e., the last one
-                # backgroundDict['elevation'] = old_bathy.variables['elevation'][t_idx, :]
-                # backgroundDict['xFRF'] = old_bathy.variables['xFRF'][:]
-                # backgroundDict['yFRF'] = old_bathy.variables['yFRF'][:]
-                # backgroundDict['updateTime'] = old_bathy.variables['updateTime'][-1]
-            except (IOError, IndexError): #index errors for first one
+                allEpoch = sb.baseRound(old_bathy['time'][:], base=60*30) # round to nearest 30 minutes
+                # now find the boolean!
+                mask = (allEpoch < go.epochd1)
+                t_idx = np.where(mask)[0][-1]
+                # ob_times = nc.num2date(old_bathy.variables['time'][:], old_bathy.variables['time'].units,
+                #                        old_bathy.variables['time'].calendar)
+                # # find newest time prior to this
+                # t_mask = (ob_times <= d1)  # boolean true/false of time
+                # t_idx = np.where(t_mask)[0][-1]  # I want the MOST RECENT ONE - i.e., the last one
+
+            except (IOError, IndexError): #index errors for first one DO NOT ACCEPT ASSETION ERRORS
                 # there is no established data set, current, build from scratch
                 #  start with the nc_b_url data (this case integrated bathy)
                 old_bathy = nc.Dataset(nc_b_url)
-                ob_times = nc.num2date(old_bathy.variables['time'][:], old_bathy.variables['time'].units, old_bathy.variables['time'].calendar)
-                # find newest time prior to this
-                t_mask = (ob_times <= d_s)  # boolean true/false of time
-                t_idx = np.where(t_mask)[0][-1]  # I want the MOST RECENT ONE - i.e., the last one
+                allEpoch = sb.baseRound(old_bathy['time'][:], base=60*30) # round to nearest 30 minutes
+                # now find the boolean!
+                mask = (allEpoch < go.epochd1)
+                t_idx = np.where(mask)[0][-1]
+                #ob_times = nc.num2date(old_bathy.variables['time'][:], old_bathy.variables['time'].units, old_bathy.variables['time'].calendar)
+                # # find newest time prior to this
+                # t_mask = (ob_times <= d_s)  # boolean true/false of time
+                # t_idx = np.where(t_mask)[0][-1]  # I want the MOST RECENT ONE - i.e., the last one
         backgroundDict['elevation'] = old_bathy.variables['elevation'][t_idx, :]
         backgroundDict['xFRF'] = old_bathy.variables['xFRF'][:]
         backgroundDict['yFRF'] = old_bathy.variables['yFRF'][:]
@@ -221,7 +230,7 @@ def makeBathyCBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
         easting = E
         northing = N
 
-        # write the nc_file for this month, like a boss, with greatness
+        # write the nc_file for this month
         nc_dict = {}
         nc_dict['elevation'] = updatedBathy['elevation']
         nc_dict['updateTime'] = updatedBathy['updateTime']
@@ -357,19 +366,22 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
 
         # prep the data
         # get the survey data that I need
-        newDict = mBATHY.getSurveyData(d1, d2)
+        # newDict = mBATHY.getSurveyData(d1, d2)
+        go = getObs(d1,d2)
+        newDict = go.getBathyTransectFromNC()
 
-        if newDict['elevation'] is None:
-            continue
+        if (newDict['time'] < go.d1).any() or (newDict['time'] > go.d2).any():
+            print('  There are no survey dates found between {} and {}'.format(go.d1, go.d2))
+            continue  # survey is not in my bounds, there are no surveys this month
         else:
-            # create my list of times for each survey?
+            # create my list of times for each survey
             surveys = np.unique(newDict['surveyNumber'])
             surveyTime = np.zeros(np.shape(surveys))
             for ss in range(0, len(surveys)):
                 # get the times of each survey
                 idt = (newDict['surveyNumber'] == surveys[ss])
                 # convert the times to a single time for each survey
-                stimesS = newDict['surveyTime'][idt]
+                stimesS = newDict['time'][idt]
                 if (max(stimesS) - min(stimesS)) > DT.timedelta(days=3):
                     surveyTime[ss] = -1000
                 else:
@@ -395,7 +407,7 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
             tempxFRF = newDict['xFRF']
             tempyFRF = newDict['yFRF']
             tempProfNum = newDict['profileNumber']
-            tempSurvTime = newDict['surveyTime']
+            tempSurvTime = newDict['time']
             indKeepData = np.where(np.in1d(tempSurvNum, surveys))
             newDict['surveyNumber'] = tempSurvNum[indKeepData]
             newDict['elevation'] = tempElev[indKeepData]
@@ -411,34 +423,33 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
             backgroundDict = {}
             try:  # look for the .nc file that I just wrote!!!
                 old_bathy = nc.Dataset(os.path.join(prev_nc_loc, prev_nc_name))
-                ob_times = nc.num2date(old_bathy.variables['time'][:], old_bathy.variables['time'].units,
-                                       old_bathy.variables['time'].calendar)
-                # find newest time prior to this
-                t_mask = (ob_times <= d_s)  # boolean true/false of time
-                t_idx = np.where(t_mask)[0][-1]  # I want the MOST RECENT ONE - i.e., the last one
-                backgroundDict['elevation'] = old_bathy.variables['elevation'][t_idx, :]
-                backgroundDict['xFRF'] = old_bathy.variables['xFRF'][:]
-                backgroundDict['yFRF'] = old_bathy.variables['yFRF'][:]
+                allEpoch = sb.baseRound(old_bathy['time'][:], base=60*30) # round to nearest 30 minutes
+                # now find the boolean!
+                mask = (allEpoch < nc.date2num(d1, 'seconds since 1970-01-01'))
+                t_idx = np.where(mask)[0][-1]
+                # ob_times = nc.num2date(old_bathy.variables['time'][:], old_bathy.variables['time'].units,
+                #                        old_bathy.variables['time'].calendar)
+                # # find newest time prior to this
+                # t_mask = (ob_times <= d_s)  # boolean true/false of time
+                # t_idx = np.where(t_mask)[0][-1]  # I want the MOST RECENT ONE - i.e., the last one
                 backgroundDict['updateTime'] = old_bathy.variables['updateTime'][t_idx, :]
-            except:
+            except (IOError, UnboundLocalError):  # IO for when files aren't on server, unbound handles first time through loop
                 try: # if i didn't just write any, look to the thredds server to find where i last left off
                     # look for the most up to date bathy in the ncml file....
                     old_bathy = nc.Dataset(nc_url)
-                    ob_times = nc.num2date(old_bathy.variables['time'][:], old_bathy.variables['time'].units,
-                                           old_bathy.variables['time'].calendar)
-                    # find newest time prior to this
-                    t_mask = (ob_times <= d_s)  # boolean true/false of time
-                    t_idx = np.where(t_mask)[0][-1]  # I want the MOST RECENT ONE - i.e., the last one
-                    backgroundDict['elevation'] = old_bathy.variables['elevation'][t_idx, :]
-                    backgroundDict['xFRF'] = old_bathy.variables['xFRF'][:]
-                    backgroundDict['yFRF'] = old_bathy.variables['yFRF'][:]
+                    allEpoch = sb.baseRound(old_bathy['time'][:], base=60*30) # round to nearest 30 minutes
+                    # now find the boolean!
+                    mask = (allEpoch < nc.date2num(d1, 'seconds since 1970-01-01'))
+                    t_idx = np.where(mask)[0][-1]
+                    # ob_times = nc.num2date(old_bathy.variables['time'][:], old_bathy.variables['time'].units,
+                    #                        old_bathy.variables['time'].calendar)
+                    # # find newest time prior to this
+                    # t_mask = (ob_times <= d_s)  # boolean true/false of time
+                    # t_idx = np.where(t_mask)[0][-1]  # I want the MOST RECENT ONE - i.e., the last one
                     backgroundDict['updateTime'] = old_bathy.variables['updateTime'][t_idx, :]
-                except:
+                except (IOError, IndexError): #index errors for first one DO NOT ACCEPT ASSETION ERRORS
                     # pull the time mean background bathymetry if you don't have any updated ones
                     old_bathy = nc.Dataset(nc_b_url)
-                    backgroundDict['elevation'] = old_bathy.variables['elevation'][:]
-                    backgroundDict['xFRF'] = old_bathy.variables['xFRF'][:]
-                    backgroundDict['yFRF'] = old_bathy.variables['yFRF'][:]
                     backgroundDict['tmBackTog'] = True
                     # it wont have an update time in this case, because it came from the time-mean background.
                     # so what should go here instead?
@@ -446,25 +457,11 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                     tempUpTime[:] = np.nan
                     backgroundDict['updateTime'] = np.ma.array(tempUpTime, mask=np.ones(np.shape(backgroundDict['elevation'])), fill_value=-999)
 
-                    # how we looking?
-                    # fig_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestFigures_CBATHY'
-                    # # background I made from the immediately preceding survey?
-                    # tempD = d1.strftime(r"%Y-%m-%d")
-                    # fig_name = 'backgroundDEM_' + tempD[0:4] + tempD[5:7] + '.png'
-                    # plt.figure()
-                    # plt.pcolor(backgroundDict['xFRF'], backgroundDict['yFRF'], backgroundDict['elevation'], cmap=plt.cm.jet, vmin=-13, vmax=5)
-                    # cbar = plt.colorbar()
-                    # cbar.set_label('(m)')
-                    # axes = plt.gca()
-                    # axes.set_xlim([-50, 550])
-                    # axes.set_ylim([-50, 1050])
-                    # plt.xlabel('xFRF (m)')
-                    # plt.ylabel('yFRF (m)')
-                    # plt.savefig(os.path.join(fig_loc, fig_name))
-                    # plt.close()
-                    #
-                    # t = 1
-                    # go time!  this is scaleC + spline!
+            backgroundDict['elevation'] = old_bathy.variables['elevation'][t_idx, :]
+            backgroundDict['xFRF'] = old_bathy.variables['xFRF'][:]
+            backgroundDict['yFRF'] = old_bathy.variables['yFRF'][:]
+
+            # go time!  this is scaleC + spline!
             out = mBATHY.makeUpdatedBATHY(backgroundDict, newDict, scalecDict=scalecDict, splineDict=splineDict)
             elevation = out['elevation']
             smoothAL = out['smoothAL']
@@ -513,18 +510,17 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                 easting = E
                 northing = N
                 # write the nc_file for this month, like a boss, with greatness
-                nc_dict = {}
-                nc_dict['elevation'] = elevation
-                nc_dict['xFRF'] = xFRF
-                nc_dict['yFRF'] = yFRF
-                nc_dict['latitude'] = latitude
-                nc_dict['longitude'] = longitude
-                nc_dict['northing'] = northing
-                nc_dict['easting'] = easting
-                nc_dict['time'] = np.array(surveyTime)
-                nc_dict['surveyNumber'] = surveys
-                nc_dict['y_smooth'] = smoothAL
-                nc_dict['updateTime'] = updateTime
+                nc_dict = {'elevation': elevation,
+                           'xFRF': xFRF,
+                           'yFRF': yFRF,
+                           'latitude': latitude,
+                           'longitude': longitude,
+                           'northing': northing,
+                           'easting': easting,
+                           'time': np.array(surveyTime),
+                           'surveyNumber': surveys,
+                           'y_smooth': smoothAL,
+                           'updateTime': updateTime,}
 
                 # what does the name need to be?
                 tempD = d1.strftime(r"%Y-%m-%d")
