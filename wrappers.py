@@ -701,7 +701,7 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                     pass
                 else:
 
-                    fig_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestFigures_Transects'
+                    fig_loc = '/home/david/BathyTroubleshooting/smoothingTest'
 
                     # zoomed in pcolor plot on AOI
                     fig_name = 'transectDEM_' + tempD[0:4] + tempD[5:7] + '.png'
@@ -828,6 +828,8 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                     fig.tight_layout(pad=1, h_pad=2.5, w_pad=1, rect=[0.0, 0.0, 1.0, 0.925])
                     fig.savefig(os.path.join(fig_loc, fig_name), dpi=300)
                     plt.close()
+
+                    t = 1
 
 
 

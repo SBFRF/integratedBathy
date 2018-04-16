@@ -770,16 +770,12 @@ def makenc_tiBATHY(ofname, dataDict, globalYaml, varYaml):
     xFRF = fid.createDimension('xFRF', dataDict['xFRF'].shape[0])
     yFRF = fid.createDimension('yFRF', dataDict['yFRF'].shape[0])
 
-    # OKAY THE DEAL IS YOU HAVE TO PASS IT A NON-MASKED ARRAY THAT ALREADY HAS THE FILL VALUES IN WHERE YOU WANT THEM TO BE
-    # THIS IS A STUPID WAY TO DO IT AND I DONT LIKE IT.
+    # Note: you have to pass this a non-masked array that already has fill values where you want them to be.
     tempUpdateTime = dataDict['updateTime']
     tempUpdateTime[np.ma.getmask(tempUpdateTime)] = -999
     del dataDict['updateTime']
     dataDict['updateTime'] = np.array(tempUpdateTime)
     # remove the mask?
-
-    # So we need to figure out what to do here.  The netcdf file is not saving the mask.
-    # And it is not converting the nan values into masked values.  so I'm not sure what to do?
 
     # write data to file
     write_data_to_nc(fid, varAtts, dataDict)
