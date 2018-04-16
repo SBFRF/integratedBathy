@@ -13,15 +13,7 @@ import csv
 import datetime as DT
 import yaml
 import time as ttime
-try:
-    import sblib as sb
-except ImportError:
-    import sys
-    sys.path.append('c:\users\u4hncasb\documents\code_repositories\sblib')
-    sys.path.append('/home/spike/repos/sblib')
-    sys.path.append('/home/number/repos/sblib')
-    import sblib as sb
-
+from sblib import sblib as sb
 
 def readflags(flagfname, header=1):
     """
@@ -145,7 +137,14 @@ def write_data_to_nc(ncfile, template_vars, data_dict, write_vars='_variables'):
     for var in accept_vars:
         if var in data_dict:
             try:
-                if "fill_value" in template_vars[var]:
+                if "fill_value" in template_vars[var] and "least_significant_digit" in template_vars[var]:
+                    new_var = ncfile.createVariable(template_vars[var]["name"],
+                                                    template_vars[var]["data_type"],
+                                                    template_vars[var]["dim"],
+                                                    fill_value=template_vars[var]["fill_value"],
+                                                    least_significant_digit=template_vars[var]['least_significant_digit'] )
+
+                elif "fill_value" in template_vars[var]:
                     new_var = ncfile.createVariable(template_vars[var]["name"],
                                                     template_vars[var]["data_type"],
                                                     template_vars[var]["dim"],
@@ -513,8 +512,8 @@ def  makenc_todaysBathyCMTB(gridDict, ofname, globalYaml, varYaml):
 def makenc_CSHORErun(ofname, dataDict, globalYaml, varYaml):
     """
        This is a function that makes netCDF files from CSHORE model runs created by
-       David Young using all the stuff Spicer Bak used. You have to build dataDict from the different dictionaries
-       output by cshore_io.load_CSHORE_results().  YOU DONT HAVE TO HAND IT LAT LON THOUGH!!!
+       David Young using all the stuff Spicer Bak used. You have to build dataDict
+       from the different dictionaries output by cshore_io.load_CSHORE_results().
 
        :param dataDict:
                 keys:
@@ -543,9 +542,9 @@ def makenc_CSHORErun(ofname, dataDict, globalYaml, varYaml):
                 ['profileNumber']
                 ['bathymetryDate']
                 ['yFRF']
-       :param ofname:
-       :param globalYaml:
-       :param varYaml:
+       :param ofname: ouput file name
+       :param globalYaml: global yaml file name
+       :param varYaml: variable yaml file name
 
        :return: netCDF file with CSHORE model results in it
        """

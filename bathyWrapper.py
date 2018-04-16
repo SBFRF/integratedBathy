@@ -2,10 +2,15 @@ import netCDF4 as nc
 import MakeUpdatedBathyDEM as mBATHY
 import datetime as dt
 import wrappers
+import datetime as DT
 
 
 
 def bathyWrapper():
+    """
+    function should run with no input
+    :return: netCDF files for bathymetry
+    """
     # ok, this is just my first crack at the wrapper for the makeUpdatedBathy script that spicer asked for
     # im going to have to get him to show me how to get it to run automatically
 
@@ -14,9 +19,8 @@ def bathyWrapper():
 
     # generic locations
     survey_ncml = 'http://134.164.129.55/thredds/dodsC/FRF/geomorphology/elevationTransects/survey/surveyTransects.ncml'
-    bathy_ncml = 'http://134.164.129.62:8080/thredds/dodsC/CMTB/integratedBathyProduct/survey/survey.ncml'
-    dir_loc = '/home/david/BathyTroubleshooting/ncFiles'
-
+    bathy_ncml = 'http://134.164.129.55/thredds/dodsC/cmtb/integratedBathyProduct/survey/survey.ncml'
+    dir_loc = u'/home/number/thredds_data/integratedBathyProduct/survey'
     # scale c and spline stuff
     # list of inputs!!!!!
     x_smooth = 40  # scale c interp x-direction smoothing
@@ -47,6 +51,8 @@ def bathyWrapper():
     splineDict['off'] = off
     splineDict['dxi'] = dxi
     splineDict['targetvar'] = targetvar
+    splineDict['wbysmooth'] = 300  # y-edge smoothing scale
+    splineDict['wbxsmooth'] = 100  # x-edge smoothing scale
 
     # get survey info
     survey = nc.Dataset(survey_ncml)

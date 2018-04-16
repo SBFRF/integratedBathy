@@ -4,8 +4,6 @@ import os
 from scipy import interpolate, signal
 # this is a Python conversion of Meg Palmsten's (NRL) splining functions used in her interpD3DFRFBackground.m script
 # DLY 7/18/2017
-
-
 def bspline_pertgrid(Zi, w, splinebctype=0, lc=4, dxm=2, dxi=1):
     """
     :param Zi: the gridded perturbation data (Nx1 or NxM) 
@@ -15,15 +13,15 @@ def bspline_pertgrid(Zi, w, splinebctype=0, lc=4, dxm=2, dxi=1):
             1 - first derivative goes to zero at boundary
             0 - value is zero at boundary
             10 - force value and derivative (first?!?) to zero at boundary
-    :param lc: smoothing constraint value (usually 4)
+    :param lc: the 1 x 1 spline curvature penalty weight
+              lc = 4 wipes out wavelengths less than 2*dxm (Nyquist)
+              can be 2 dimensions with x first dimension and y the 2nd
     :param dxm: coarsening of the grid (e.g., 2 means calculate with a dx that is 2x input dx)
     :param dxi: fining of the grid (e.g., 0.1 means return spline on a grid that is 10x input dx)
     
     :return: Zi - splined version of Zi 
     """
-
     sz = np.shape(Zi)
-
     assert len(sz) <= 3, 'bspline_pertgrid Error: Zi must be array with three or fewer dimensions!'
     assert np.shape(Zi) == np.shape(w), 'bspline_pertgrid Error: dimensions of w must match Zi!'
     spline_types = [2, 1, 0, 10]
@@ -31,7 +29,12 @@ def bspline_pertgrid(Zi, w, splinebctype=0, lc=4, dxm=2, dxi=1):
 
     Ny = sz[0]
     Nx = sz[1]
-
+    if np.size(lc)>1:
+        lcx=lc[0]
+        lcy=lc[1]
+    else:
+        lcx=lc
+        lcy=lc
     # allow 1D input
     if ((Ny > 1) & (Nx == 1)):
         Zi = np.transpose(Zi)
@@ -69,7 +72,7 @@ def bspline_pertgrid(Zi, w, splinebctype=0, lc=4, dxm=2, dxi=1):
     # do I need to fix dxi???!?!?!?!
     if ((Ny > 1) & (Nx >1) & (type(dxi) == int)):
         dxi = [dxi, dxi]
-    elif ((Ny > 1) & (Nx > 1) & (type(dxm) == float)):
+    elif ((Ny > 1) & (Nx > 1) & (type(dxi) == float)):
         dxi = [dxi, dxi]
     elif isinstance(dxi, list):
         pass
@@ -140,7 +143,7 @@ def bspline_pertgrid(Zi, w, splinebctype=0, lc=4, dxm=2, dxi=1):
             id = np.where(((~np.isnan(Zi[:, ii])) & (w[:, ii] > fac)))
             ztmp = ztmp0
             ztmp[id] = Zi[id, ii]
-            temp = bspline_compute(y, ztmp, w[:, ii], ym, dym, lc, splinebctype[1])
+            temp = bspline_compute(y, ztmp, w[:, ii], ym, dym, lcy, splinebctype[1])
             am = temp['am']
             aci = temp['aci']
             J = temp['J']
@@ -165,18 +168,17 @@ def bspline_pertgrid(Zi, w, splinebctype=0, lc=4, dxm=2, dxi=1):
         y = ym
         Ny = len(ym)
 
-
-    # now run the spline along the x-direction
+    # now run the spline along the cross-shore direction
     Zprime = np.zeros((Ny, Nxi))
     ztmp0 = np.zeros(np.shape(Zi[0, :]))
     fac = np.finfo(float).eps
 
     for ii in range(0, Ny):
-        # run spline
+        # run spline in cross shore
         id = np.where(((~np.isnan(Zi[ii, :])) & (w[ii, :] > fac)))
         ztmp = ztmp0
         ztmp[id] = Zi[ii, id]
-        temp = bspline_compute(np.transpose(x), np.transpose(ztmp), np.transpose(w[ii, :]), xm, dxm, lc, splinebctype[0])
+        temp = bspline_compute(np.transpose(x), np.transpose(ztmp), np.transpose(w[ii, :]), xm, dxm, lcx, splinebctype[0])
         # check to see if we are also forcing boundary
         am = temp['am']
         if fix_ends[0]:
@@ -214,14 +216,11 @@ def bspline_pertgrid(Zi, w, splinebctype=0, lc=4, dxm=2, dxi=1):
             zm = temp['z']
             Zi[:, ii] = zm
 
-
     return Zi
 
 
 def bspline_compute(x, z, w, xm, dxm, lc, bctype):
-    # this fits 1D data to a spline, like a boss....
     """
-    
     :param x: the N x 1 data locations
     :param z: the N x 1 observations
     :param w: the N x 1 observations weights (i.e., rms(true)/ (rms(error) + rms(true)))
