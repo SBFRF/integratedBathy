@@ -2450,7 +2450,7 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
 
             # create and store a variable for the last time this was updated.
             updateMATi = updateMAT.copy()
-            updateMATi[y1:y2 + 1, x1:x2 + 1] = np.ma.array(newDict['surveyMeanTime']*np.ones(np.shape(newZn)), mask=np.zeros(np.shape(newZn)), fill_value=-999)
+            updateMATi[y1:y2 + 1, x1:x2 + 1] = np.ma.array(newDict['surveyMeanTime'][tt]*np.ones(np.shape(newZn)), mask=np.zeros(np.shape(newZn)), fill_value=-999)
 
         # update Zi for next iteration
         del Zi

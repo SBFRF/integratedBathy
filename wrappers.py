@@ -403,10 +403,9 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
             newDict['yFRF'] = tempyFRF[indKeepData]
             newDict['profileNumber'] = tempProfNum[indKeepData]
             newDict['surveyTime'] = tempSurvTime[indKeepData]
-            if np.size(surveyTime) > 1:
-                newDict['surveyMeanTime'] = surveyTime[tt]
-            else:
-                newDict['surveyMeanTime'] = surveyTime
+            newDict['surveyMeanTime'] = surveyTime
+
+
             # background data
             backgroundDict = {}
             try:  # look for the .nc file that I just wrote!!!
