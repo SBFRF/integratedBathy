@@ -347,8 +347,8 @@ makenc.makenc_t0BATHY(os.path.join(nc_loc, nc_name), nc_dict, globalYaml=global_
 
 
 # list of inputs!!!!!
-x_smooth = 5  # scale c interp x-direction smoothing
-y_smooth = 10  # scale c interp y-direction smoothing
+x_smooth = 40  # scale c interp x-direction smoothing
+y_smooth = 100  # scale c interp y-direction smoothing
 # splinebctype - this is the type of spline you want to force
 # options are....
 # 2 - second derivative goes to zero at boundary
