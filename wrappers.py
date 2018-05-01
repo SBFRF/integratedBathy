@@ -541,7 +541,7 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
 
                 # where am I saving these nc's as I make them
                 nc_loc = os.path.join(dir_loc, tempD[0:4])
-                # save em like a boss?
+                # save em?
                 makenc.makenc_tiBATHY(os.path.join(nc_loc, nc_name), nc_dict, globalYaml=global_yaml, varYaml=var_yaml)
 
                 # save this location for next time through the loop
