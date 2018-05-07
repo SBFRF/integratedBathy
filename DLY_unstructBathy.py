@@ -115,7 +115,7 @@ t = 1
 # make a new "time-mean" bathy out of this one?
 
 
-
+"""
 # to make sure we are covering everything
 # plot the rDEM with the triangulated grid from the .tel file overlaid on top?
 ploc = '/home/david/BathyTroubleshooting/BackgroundFiles/TestFigs'
@@ -139,6 +139,7 @@ plt.savefig(os.path.join(ploc, pname), dpi=300)
 # load it up in SMS like Spicer did to make sure I have't screwed up the conversion?
 # it looks, offset just a bit?  I need to think about this a little more.
 t = 1
+"""
 
 # now we need to make a dictionary that has the same keys as this "bathy" dictionary to hand to interpIntegrated...
 # so we can reinterpolate the whole .tel file grid
@@ -160,6 +161,7 @@ xT = ugridDict['xFRF'][~np.isnan(newDepth)]
 yT = ugridDict['yFRF'][~np.isnan(newDepth)]
 newDepthT = newDepth[~np.isnan(newDepth)]
 
+"""
 # okay, what we are looking for here is any discontinuous stuff in the region where the model is actually going
 # to be run.  don't really care if the portion of the grid on the sound is messed up
 figloc = '/home/david/BathyTroubleshooting/NewTel'
@@ -174,6 +176,24 @@ pDict['cbarLabel'] = 'Depth ($m$)'
 pDict['z'] = newDepthT
 pDict['cbarColor'] = 'RdYlBu'
 noP.plotUnstructBathy(ofname=ofname, pDict=pDict)
+"""
 
+# integrate this back into the .tel file?
+depthN = depth.copy()
+depthN[~np.isnan(newDepth)] = newDepth[~np.isnan(newDepth)]
+ncDict = cmsfio.tel_dict.copy()
+del ncDict['depth']
+# copy over the new depth
+ncDict['depth'] = depthN
+# include the xFRF, yFRF positions of each cell
+ncDict['xFRF'] = ugridDict['xFRF']
+ncDict['yFRF'] = ugridDict['yFRF']
+
+ncLoc = '/home/david/BathyTroubleshooting/BackgroundFiles'
+ncName = 'CMSFtel0.nc'
+ncgYaml = '/home/david/PycharmProjects/makebathyinterp/yamls/BATHY/CMSFtel0_global.yml'
+ncvYaml = '/home/david/PycharmProjects/makebathyinterp/yamls/BATHY/CMSFtel0_var.yml'
+
+makenc.makenc_CMSFtel(ofname=os.path.join(ncLoc, ncName), dataDict=ncDict, globalYaml=ncgYaml, varYaml=ncvYaml)
 
 t = 1
