@@ -50,7 +50,7 @@ psname = os.path.join(ploc, pname)
 ugridDict = pickle.load(open(psname, 'rb'))
 """
 
-
+"""
 # ok, ok, now I have a nice point cloud.  determine full extents?
 dx = 5
 dy = 5
@@ -98,10 +98,10 @@ var_yaml = '/home/david/PycharmProjects/makebathyinterp/yamls/BATHY/FRFt0_var.ym
 makenc.makenc_t0BATHY(os.path.join(nc_loc, nc_name), nc_dict, globalYaml=global_yaml, varYaml=var_yaml)
 t = 1
 
-
+"""
 # now reload it!
 nc_loc = '/home/david/BathyTroubleshooting/BackgroundFiles'
-nc_name = 'backgroundDEMt0_tel.nc'
+nc_name = 'backgroundDEMt0tel_TimeMean.nc'
 rDEM = nc.Dataset(os.path.join(nc_loc, nc_name))
 zDEM = rDEM['elevation'][:]
 xFRFdem = rDEM['xFRF'][:]
@@ -115,7 +115,7 @@ t = 1
 # make a new "time-mean" bathy out of this one?
 
 
-"""
+
 # to make sure we are covering everything
 # plot the rDEM with the triangulated grid from the .tel file overlaid on top?
 ploc = '/home/david/BathyTroubleshooting/BackgroundFiles/TestFigs'
@@ -138,7 +138,7 @@ plt.xlabel('xFRF', fontsize=12)
 plt.savefig(os.path.join(ploc, pname), dpi=300)
 # load it up in SMS like Spicer did to make sure I have't screwed up the conversion?
 # it looks, offset just a bit?  I need to think about this a little more.
-"""
+t = 1
 
 # now we need to make a dictionary that has the same keys as this "bathy" dictionary to hand to interpIntegrated...
 # so we can reinterpolate the whole .tel file grid
