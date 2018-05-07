@@ -196,4 +196,5 @@ ncvYaml = '/home/david/PycharmProjects/makebathyinterp/yamls/BATHY/CMSFtel0_var.
 
 makenc.makenc_CMSFtel(ofname=os.path.join(ncLoc, ncName), dataDict=ncDict, globalYaml=ncgYaml, varYaml=ncvYaml)
 
+# now we read it back out to see if it worked?
 t = 1
