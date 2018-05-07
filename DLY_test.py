@@ -394,7 +394,7 @@ splineDict['wbxsmooth'] = wbxsmooth
 # mBATHY.makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=scalecDict, splineDict=splineDict, plot=1)
 
 
-gT.makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=dSTR_s, dSTR_e=dSTR_e, scalecDict=scalecDict, splineDict=None, plot=0)
+gT.makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=dSTR_s, dSTR_e=dSTR_e, scalecDict=scalecDict, splineDict=None, plot=None)
 
 
 t = 1
