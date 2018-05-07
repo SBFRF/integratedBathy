@@ -12,3 +12,6 @@
 [submodule "scaleCinterp_python"]
 	path = scaleCinterp_python
 	url = git@github.com:SBFRF/scaleCinterp_python.git
+[submodule "prepdata"]
+	path = prepdata
+	url = git@bitbucket.org:SBFRF/prepdata.git
