@@ -99,6 +99,8 @@ makenc.makenc_t0BATHY(os.path.join(nc_loc, nc_name), nc_dict, globalYaml=global_
 t = 1
 
 """
+
+
 # now reload it!
 nc_loc = '/home/david/BathyTroubleshooting/BackgroundFiles'
 nc_name = 'backgroundDEMt0tel_TimeMean.nc'
@@ -111,6 +113,7 @@ yFRFdem = rDEM['yFRF'][:]
 xFRFdem2 = np.array(xFRFdem)
 yFRFdem2 = np.array(yFRFdem)
 t = 1
+
 
 # make a new "time-mean" bathy out of this one?
 
@@ -141,6 +144,7 @@ plt.savefig(os.path.join(ploc, pname), dpi=300)
 t = 1
 """
 
+"""
 # now we need to make a dictionary that has the same keys as this "bathy" dictionary to hand to interpIntegrated...
 # so we can reinterpolate the whole .tel file grid
 bathy = {}
@@ -160,6 +164,7 @@ newDepth[depth < -900] = np.nan  # so set those to nan!
 xT = ugridDict['xFRF'][~np.isnan(newDepth)]
 yT = ugridDict['yFRF'][~np.isnan(newDepth)]
 newDepthT = newDepth[~np.isnan(newDepth)]
+"""
 
 """
 # okay, what we are looking for here is any discontinuous stuff in the region where the model is actually going
@@ -178,6 +183,7 @@ pDict['cbarColor'] = 'RdYlBu'
 noP.plotUnstructBathy(ofname=ofname, pDict=pDict)
 """
 
+"""
 # integrate this back into the .tel file?
 depthN = depth.copy()
 depthN[~np.isnan(newDepth)] = newDepth[~np.isnan(newDepth)]
@@ -189,12 +195,16 @@ ncDict['depth'] = depthN
 ncDict['xFRF'] = ugridDict['xFRF']
 ncDict['yFRF'] = ugridDict['yFRF']
 
-ncLoc = '/home/david/BathyTroubleshooting/BackgroundFiles'
+ncLoc = '/home/david/BathyTroubleshooting/BackgroundFiles/CMSF'
 ncName = 'CMSFtel0.nc'
 ncgYaml = '/home/david/PycharmProjects/makebathyinterp/yamls/BATHY/CMSFtel0_global.yml'
 ncvYaml = '/home/david/PycharmProjects/makebathyinterp/yamls/BATHY/CMSFtel0_var.yml'
 
 makenc.makenc_CMSFtel(ofname=os.path.join(ncLoc, ncName), dataDict=ncDict, globalYaml=ncgYaml, varYaml=ncvYaml)
+"""
 
 # now we read it back out to see if it worked?
+ncLoc = '/home/david/BathyTroubleshooting/BackgroundFiles/CMSF'
+ncName = 'CMSFtel0.nc'
+cmsfio.read_CMSF_telnc(ncLoc)
 t = 1

@@ -1,6 +1,6 @@
 # stuff
 
-_variables: ['elevation', 'xFRF', 'yFRF']
+_variables: ['cellID', 'elevation', 'xFRF', 'yFRF', 'latitude', 'longitude', 'xPos', 'yPos', 'dx', 'dy', 'azimuth', 'origin_easting', 'origin_northing', 'numberCells', 'cellNeighbors']
 _attributes: ['notes']
 _dimensions: ['cellID', 'one', 'eight']
 
@@ -136,27 +136,27 @@ azimuth:
     coordinates: 'N/A'
     description: 'the azimuth of the local .tel file grid system'
 
-originEasting:
-    name: 'originEasting'
+origin_easting:
+    name: 'origin_easting'
     units: 'm NCSP'
     standard_name: ''
     long_name: 'NCSP Easting of .tel file grid origin'
     data_type: 'f8'
     dim: ['one']
     fill_value: '-9999.99'
-    short_name: 'originEasting'
+    short_name: 'origin_easting'
     coordinates: 'm NCSP'
     description: 'The NSCP Easting of the origin for the .tel file grid'
 
-originNorthing:
-    name: 'originNorthing'
+origin_northing:
+    name: 'origin_northing'
     units: 'm NCSP'
     standard_name: ''
     long_name: 'NCSP Northing of .tel file grid origin'
     data_type: 'f8'
     dim: ['one']
     fill_value: '-9999.99'
-    short_name: 'originNorthing'
+    short_name: 'origin_northing'
     coordinates: 'm NCSP'
     description: 'The NSCP Northing of the origin for the .tel file grid'
 
