@@ -14,7 +14,7 @@ from plotting import nonoperationalPlots as noP
 
 # ok, for right now this is just David's test script to create a new "base grid" from unstructured grid data
 # we will be moving the functionality into seperate locations as appropriate later
-
+"""
 # step 1 - we need to make a new regional background DEM that covers the ENTIRE domain of the simulation!!!!
 inputDict = {}
 inputDict['gridTEL'] = '/home/david/PycharmProjects/cmtb/grids/CMS/CMS-Flow-FRF.tel'
@@ -33,6 +33,7 @@ ugridDict['units'] = 'm'
 temp1 = gp.ncsp2FRF(ugridDict['x'], ugridDict['y'])
 ugridDict['xFRF'] = temp1['xFRF']
 ugridDict['yFRF'] = temp1['yFRF']
+"""
 
 """
 # this actually takes almost no time at all.  its all the regional DEM that takes forever...
@@ -100,7 +101,7 @@ t = 1
 
 """
 
-
+"""
 # now reload it!
 nc_loc = '/home/david/BathyTroubleshooting/BackgroundFiles'
 nc_name = 'backgroundDEMt0tel_TimeMean.nc'
@@ -113,6 +114,7 @@ yFRFdem = rDEM['yFRF'][:]
 xFRFdem2 = np.array(xFRFdem)
 yFRFdem2 = np.array(yFRFdem)
 t = 1
+"""
 
 
 # make a new "time-mean" bathy out of this one?
@@ -203,8 +205,16 @@ ncvYaml = '/home/david/PycharmProjects/makebathyinterp/yamls/BATHY/CMSFtel0_var.
 makenc.makenc_CMSFtel(ofname=os.path.join(ncLoc, ncName), dataDict=ncDict, globalYaml=ncgYaml, varYaml=ncvYaml)
 """
 
+"""
 # now we read it back out to see if it worked?
 ncLoc = '/home/david/BathyTroubleshooting/BackgroundFiles/CMSF'
 ncName = 'CMSFtel0.nc'
 cmsfio.read_CMSF_telnc(ncLoc)
+"""
+
+# ok, I don't have internet so I can't push my prepdata changes over to cmtb.
+# so I need to practice my cmsf analysis script here for the moment
+path = '/home/david/Documents/CMSflowTxt/PracticeResults'
+cmsfio = inputOutput.cmsfIO()
+cmsfio.read_CMSF_all(path=path)
 t = 1
