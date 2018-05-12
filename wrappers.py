@@ -7,7 +7,6 @@ from collections import OrderedDict
 import netCDF4 as nc
 from sblib import geoprocess as gp
 import makenc
-from matplotlib import pyplot as plt
 from sblib import sblib as sb
 
 def makeBathyCBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, ncStep='daily', plot=None, **kwargs):
@@ -125,6 +124,7 @@ def makeBathyCBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
         # prep the data for interpolation
         # put new data into dictionary
         if 'waveHeightThreshold' in kwargs:  # first try thresholded cBathy
+            from sblib import kalman_filter
             # set variables
             waveHsThreshold = kwargs['waveHeightThreshold']
             # go get wave data
@@ -132,11 +132,9 @@ def makeBathyCBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                 rawspec = go.getWaveSpec('waverider-26m')
             except: # when there's no data at 26 go to 17
                 rawspec = go.getWaveSpec('waverider-17m')
-
-            from sblib import kalman_filter
             newDict = kalman_filter.cBathy_ThresholdedLogic(cBathy, rawspec, waveHsThreshold)
             if newDict == None:
-                print('kalman Filter Returned NONE')
+                print('....kalman Filter Returned NONE')
                 continue
             nc_url = 'http://134.164.129.55/thredds/dodsC/cmtb/integratedBathyProduct/cBKF-T/cBKF-T.ncml'
             ncFnameBase = 'CMTB-integratedBathyProduct_cBKF-T_'
@@ -149,8 +147,19 @@ def makeBathyCBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
             newDict['yFRF'] = cBathy['ym']
             newDict['surveyMeanTime'] = cBathy['epochtime'][-1] # this is the last log of update time
             newDict['epochtime'] = cBathy['epochtime']
+            newDict['time'] = cBathy['time']
             ncFnameBase = 'CMTB-integratedBathyProduct_cBKF_'
             fig_loc = 'figures/cbathy'
+
+        if isinstance(newDict['elevation'], np.ma.masked_array) and newDict['elevation'].mask.any():
+            idxBadMask = []
+            ## Now remove those that are all masked in XY - this could probably be more efficient
+            for ii in range(newDict['elevation'].shape[0]):
+                if not newDict['elevation'][ii].mask.all():
+                    # log the indicies that are good
+                    idxBadMask.append(ii)
+            newDict = sb.reduceDict(newDict, idxBadMask)
+
         # put old/background data into dictionary, decide where to get background data from
         backgroundDict = {}
         assert nc.num2date(go.epochd1, 'seconds since 1970-01-01') == d1, 'the below logic assumes d1 == epochd1'
@@ -287,30 +296,23 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                         if not specified it will default to:
                         x_smooth = 100
                         y_smooth = 200
-    :param splineDict: keys are:
-                        splinebctype
-                            options are....
-                            2 - second derivative goes to zero at boundary
-                            1 - first derivative goes to zero at boundary
-                            0 - value is zero at boundary
-                            10 - force value and derivative(first?!?) to zero at boundary
-                        lc - spline smoothing constraint value (integer <= 1)
-                        dxm -  coarsening of the grid for spline (e.g., 2 means calculate with a dx that is 2x input dx)
-                                can be tuple if you want to do dx and dy separately (dxm, dym), otherwise dxm is used for both
-                        dxi - fining of the grid for spline (e.g., 0.1 means return spline on a grid that is 10x input dx)
-                                as with dxm, can be a tuple if you want separate values for dxi and dyi
-                        targetvar - this is the target variance used in the spline function.
-                        wbysmooth - y-edge smoothing length scale
-                        wbxsmooth - x-edge smoothing length scale
+    :param splineDict: keys are
+        :key splinebctype
+                   options are....
+                   2 - second derivative goes to zero at boundary
+                   1 - first derivative goes to zero at boundary
+                   0 - value is zero at boundary
+                   10 - force value and derivative(first?!?) to zero at boundary
+        :key lc - spline smoothing constraint value (integer <= 1)
+        :key dxm -  coarsening of the grid for spline (e.g., 2 means calculate with a dx that is 2x input dx)
+                can be tuple if you want to do dx and dy separately (dxm, dym), otherwise dxm is used for both
+        :key dxi - fining of the grid for spline (e.g., 0.1 means return spline on a grid that is 10x input dx)
+                as with dxm, can be a tuple if you want separate values for dxi and dyi
+        :key targetvar - this is the target variance used in the spline function.
+        :key wbysmooth - y-edge smoothing length scale
+        :key wbxsmooth - x-edge smoothing length scale
 
-                        if not specified it will default to:
-                        splinebctype = 10
-                        lc = 4
-                        dxm = 2
-                        dxi = 1
-                        targetvar = 0.45
-                        wbysmooth = 300
-                        wbxsmooth = 100
+
     :param ncStep: do you want to make monthly or daily nc files?
                     options are 'monthly' or 'daily'.  'monthly' is NOT recommended for CBATHY!!!!!
     :return:
@@ -358,7 +360,7 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
 
     # loop time
     nsteps = np.size(dList) - 1
-    for tt in range(0, nsteps):
+    for tt in range(0, nsteps):   # loop through days / months depending on
         # pull out the dates I need for this step!
         d1 = dList[tt]
         d2 = dList[tt + 1]
@@ -368,16 +370,16 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
         # get the survey data that I need
         # newDict = mBATHY.getSurveyData(d1, d2)
         go = getObs(d1,d2)
-        newDict = go.getBathyTransectFromNC()
+        newDict = go.getBathyTransectFromNC(forceReturnAll=True)
 
-        if (newDict['time'] < go.d1).any() or (newDict['time'] > go.d2).any():
+        if newDict == None or (newDict['time'] < go.d1).any() or (newDict['time'] > go.d2).any():
             print('  There are no survey dates found between {} and {}'.format(go.d1, go.d2))
             continue  # survey is not in my bounds, there are no surveys this month
         else:
             # create my list of times for each survey
             surveys = np.unique(newDict['surveyNumber'])
             surveyTime = np.zeros(np.shape(surveys))
-            for ss in range(0, len(surveys)):
+            for ss in range(0, len(surveys)):  # loop through the number of surveys in a month
                 # get the times of each survey
                 idt = (newDict['surveyNumber'] == surveys[ss])
                 # convert the times to a single time for each survey
@@ -433,6 +435,8 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                 # t_mask = (ob_times <= d_s)  # boolean true/false of time
                 # t_idx = np.where(t_mask)[0][-1]  # I want the MOST RECENT ONE - i.e., the last one
                 backgroundDict['updateTime'] = old_bathy.variables['updateTime'][t_idx, :]
+                backgroundDict['elevation'] = old_bathy.variables['elevation'][t_idx, :]
+
             except (IOError, UnboundLocalError):  # IO for when files aren't on server, unbound handles first time through loop
                 try: # if i didn't just write any, look to the thredds server to find where i last left off
                     # look for the most up to date bathy in the ncml file....
@@ -447,17 +451,21 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                     # t_mask = (ob_times <= d_s)  # boolean true/false of time
                     # t_idx = np.where(t_mask)[0][-1]  # I want the MOST RECENT ONE - i.e., the last one
                     backgroundDict['updateTime'] = old_bathy.variables['updateTime'][t_idx, :]
+                    backgroundDict['elevation'] = old_bathy.variables['elevation'][t_idx, :]
+
                 except (IOError, IndexError): #index errors for first one DO NOT ACCEPT ASSETION ERRORS
                     # pull the time mean background bathymetry if you don't have any updated ones
+                    print('         Warning: Kicked to The Backgrond Grid!')
                     old_bathy = nc.Dataset(nc_b_url)
                     backgroundDict['tmBackTog'] = True
                     # it wont have an update time in this case, because it came from the time-mean background.
                     # so what should go here instead?
-                    tempUpTime = np.zeros(np.shape(backgroundDict['elevation']))
+                    tempUpTime = np.zeros(np.shape(old_bathy['elevation']))
                     tempUpTime[:] = np.nan
-                    backgroundDict['updateTime'] = np.ma.array(tempUpTime, mask=np.ones(np.shape(backgroundDict['elevation'])), fill_value=-999)
+                    backgroundDict['updateTime'] = np.ma.array(tempUpTime, mask=np.ones_like(tempUpTime), fill_value=-999)
+                    backgroundDict['elevation'] = old_bathy['elevation'][:]
 
-            backgroundDict['elevation'] = old_bathy.variables['elevation'][t_idx, :]
+
             backgroundDict['xFRF'] = old_bathy.variables['xFRF'][:]
             backgroundDict['yFRF'] = old_bathy.variables['yFRF'][:]
 
@@ -548,5 +556,5 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                 # plot some stuff ( fig_loc, d1,
                 if plot is not None:
                    import plotFuncs
-                   plotFuncs.bathyQAQCplots(fig_loc, d1, updatedBathy=out)
+                   plotFuncs.bathyQAQCplots(fig_loc, d1, updatedBathy=nc_dict)
 

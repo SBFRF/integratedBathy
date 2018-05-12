@@ -1929,7 +1929,7 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
 
     if splineDict is None:
         splinebctype = 10
-        lc = [4, 12]
+        lc = np.array([4, 12])
         dxm = 2
         dxi = 1
         targetvar = 0.45
@@ -1943,7 +1943,8 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
         targetvar = splineDict['targetvar']
         wbysmooth = splineDict['wbysmooth']
         wbxsmooth = splineDict['wbxsmooth']
-
+    if not isinstance(lc, np.ndarray):
+        lc = np.array(lc)
 
     # load my background grid information
     Zi = backgroundDict['elevation']
@@ -1960,9 +1961,13 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
     rows, cols = np.shape(xFRFi)
 
     # pull some stuff from my new data and check the dimension size
+    # direct conversion, unmasks bad values
     newX = np.array(newDict['xFRF'])
     newY = np.array(newDict['yFRF'])
-    newZ = np.array(newDict['elevation'])
+    if isinstance(newDict['elevation'], np.ma.masked_array):
+        newZ = newDict['elevation'].filled(np.nan)  # fill the array with the np.nan fill value
+    else:
+        newZ = np.array(newDict['elevation'])
 
     # check number of dimensions of dataZ
     if newZ.ndim <= 1:
@@ -1991,6 +1996,7 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
     surveyNumber = np.zeros(num_iter)  #initialize variable for survey data, won't be used for gridded input
 
     for tt in range(0, num_iter):  # break into number
+        print('.... Working on {} of {}'.format(tt, num_iter))
         if gridFlag:  # this is gridded input data
             # get my stuff out
             if newZ.ndim <= 2:
@@ -1999,7 +2005,7 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
             else:
                 zV = newZ[tt, :, :]
 
-            if np.isclose(999.99, zV, rtol=.1).all():
+            if np.isclose(999.99, zV, rtol=.1).all() or np.isnan(zV).all():
                 continue # move to the next one if it's all 999 - ran into issues with fill values
 
             # were you handed a 2D array of X's and Y's or a 1D vector corresponding to that dimension?
@@ -2159,7 +2165,7 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
                 # 3 - bump up lc
                 lc = np.multiply(lc, lcInc) * (mod_num - tt)
                 # round to nearest 2
-                if lc >= 0:
+                if (lc >= 0).all():
                     lc = lc - np.ceil(np.divide(lc,2.))
                 else:
                     lc = lc - np.ceil(np.divide(lc,2.)) + 2
@@ -2194,8 +2200,7 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
                 pass
             elif 2 * max_spacing > y_smooth:
                 y_smooth_u = int(dy * round(float(2 * max_spacing) / dy))
-            else:
-                pass
+
 
             del temp
         ################################
@@ -2309,9 +2314,13 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
               'updateTime': updateTime,
               'MSRi':       MSRi,
               'NMSEi':      NMSEi,
-              'MSEi':       MSEi}
+              'MSEi':       MSEi,
+              }
     if gridFlag != True:
         output['surveyNumber'] = surveyNumber
+    else:
+        output['time'] =    newDict['epochtime']
+
     return output
 
 def makeBATHYfromSurvey(d1, scalecDict=None, gridDict=None):
