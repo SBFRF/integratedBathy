@@ -33,8 +33,8 @@ def runBathyProductManually(version, *args):
         dSTR_s = args[0][0]
         dSTR_e = args[0][1]
     else:
-        dSTR_s = '2016-07-17T00:00:00Z'
-        dSTR_e = '2016-09-01T00:00:00Z'
+        dSTR_s = '2018-01-17T00:00:00Z'
+        dSTR_e = '2018-07-01T00:00:00Z'
     cBathyYbounds = [0, 1250]
     cBathyXbounds = [0, 500]
     scalecDict = {}
@@ -54,11 +54,11 @@ def runBathyProductManually(version, *args):
                          ncStep='monthly', plot=True)
     # #then make all cBKF
     elif version == 'cBKF':
-        wrappers.makeBathyCBATHY(dSTR_s, dSTR_e, dir_loc='/home/number/thredds_data/integratedBathyProduct/cBKF_long', scalecDict=scalecDict, splineDict=splineDict,
+        wrappers.makeBathyCBATHY(dSTR_s, dSTR_e, dir_loc='/home/number/thredds_data/integratedBathyProduct/cBKF', scalecDict=scalecDict, splineDict=splineDict,
                              plot=True, xbounds=cBathyXbounds, ybounds=cBathyYbounds, ncStep='daily')
     # # then make cBKF-T
     elif version == 'cBKF-T':
-        wrappers.makeBathyCBATHY(dSTR_s, dSTR_e, dir_loc='/home/number/thredds_data/integratedBathyProduct/cBKF-T_long', scalecDict=scalecDict, splineDict=splineDict,
+        wrappers.makeBathyCBATHY(dSTR_s, dSTR_e, dir_loc='/home/number/thredds_data/integratedBathyProduct/cBKF-T', scalecDict=scalecDict, splineDict=splineDict,
                              plot=True, xbounds=cBathyXbounds, ybounds=cBathyYbounds, ncStep='daily', waveHeightThreshold=1.2)
 
 if __name__ == "__main__":
