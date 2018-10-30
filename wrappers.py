@@ -5,10 +5,10 @@ import datetime as DT
 import MakeUpdatedBathyDEM as mBATHY
 from collections import OrderedDict
 import netCDF4 as nc
-from sblib import geoprocess as gp
+from testbedutils import geoprocess as gp
 import makenc
 from matplotlib import pyplot as plt
-from sblib import sblib as sb
+from testbedutils import sblib as sb
 
 def makeBathyCBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, ncStep='daily', plot=None, **kwargs):
     """
@@ -125,6 +125,7 @@ def makeBathyCBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
         # prep the data for interpolation
         # put new data into dictionary
         if 'waveHeightThreshold' in kwargs:  # first try thresholded cBathy
+            from testbedutils import kalman_filter
             # set variables
             waveHsThreshold = kwargs['waveHeightThreshold']
             # go get wave data
@@ -133,8 +134,24 @@ def makeBathyCBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
             except: # when there's no data at 26 go to 17
                 rawspec = go.getWaveSpec('waverider-17m')
 
-            from sblib import kalman_filter
             newDict = kalman_filter.cBathy_ThresholdedLogic(cBathy, rawspec, waveHsThreshold)
+            if newDict == None:
+                print('kalman Filter Returned NONE')
+                continue
+            nc_url = 'http://134.164.129.55/thredds/dodsC/cmtb/integratedBathyProduct/cBKF-T/cBKF-T.ncml'
+            ncFnameBase = 'CMTB-integratedBathyProduct_cBKF-T_'
+            global_yaml = 'yamls/IntegratedcBKF-T_Global.yml'
+            fig_loc = 'figures/cbathy_thresh'
+        elif 'varianceThreshold' in kwargs:
+            from testbedutils import kalman_filter
+            variancePacket = go.getArgus('var', xbounds=[150, 300], ybounds=[550, 1250])
+            try:
+                rawspec = go.getWaveSpec('waverider-26m')
+            except: # when there's no data at 26 go to 17
+                rawspec = go.getWaveSpec('waverider-17m')
+            newDict = kalman_filter.cBathy_VarianceLogic(cBathy, variancePacket, rawspec,
+                                                         varianceThreshold=kwargs['varianceThreshold'],
+                                                         percentThreshold=kwargs['percentThreshold'])
             if newDict == None:
                 print('kalman Filter Returned NONE')
                 continue

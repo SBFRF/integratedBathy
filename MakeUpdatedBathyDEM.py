@@ -1,8 +1,8 @@
 import os
 import netCDF4 as nc
 import numpy as np
-from sblib import geoprocess as gp
-from sblib import sblib as sb
+from testbedutils import geoprocess as gp
+from testbedutils import sblib as sb
 import makenc
 from matplotlib import pyplot as plt
 from bsplineFunctions import bspline_pertgrid, DLY_bspline
@@ -1859,7 +1859,9 @@ def subgridBounds2(surveyDict, gridDict, xMax=1290, maxSpace=149, surveyFilter=F
 
 def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
     """
-    :param backgroundDict: keys are:
+    Args
+
+    backgroundDict (dict): a dictionary describing the input
         :key elevation: 2D matrix containing the elevations at every node for
                          whatever my background is supposed to be for this run
         :key xFRF: 1D array of xFRF positions corresponding to the second dimension of elevation
