@@ -19,7 +19,7 @@ import wrappers
 from scaleCinterp_python.DEM_generator import DEM_generator
 import MakeUpdatedBathyDEM as mBATHY
 
-
+"""
 # how much does my new stuff look like what allison had?
 bathyDict = {}
 nc_url = '/home/david/BathyTroubleshooting/ncFiles/2015/CMTB-integratedBathyProduct_survey_201510.nc'
@@ -169,6 +169,7 @@ for tt in range(0, np.shape(elevation)[0]):
 
 
 t = 1
+"""
 
 
 """
@@ -346,8 +347,8 @@ makenc.makenc_t0BATHY(os.path.join(nc_loc, nc_name), nc_dict, globalYaml=global_
 
 
 # list of inputs!!!!!
-x_smooth = 40  # scale c interp x-direction smoothing
-y_smooth = 100  # scale c interp y-direction smoothing
+x_smooth = 5  # scale c interp x-direction smoothing
+y_smooth = 10  # scale c interp y-direction smoothing
 # splinebctype - this is the type of spline you want to force
 # options are....
 # 2 - second derivative goes to zero at boundary
@@ -355,8 +356,8 @@ y_smooth = 100  # scale c interp y-direction smoothing
 # 0 - value is zero at boundary
 # 10 - force value and derivative(first?!?) to zero at boundary
 splinebctype = 10
-lc = 4  # spline smoothing constraint value
-dxm = 2  # coarsening of the grid for spline (e.g., 2 means calculate with a dx that is 2x input dx)
+lc = 0.5  # spline smoothing constraint value
+dxm = 1  # coarsening of the grid for spline (e.g., 2 means calculate with a dx that is 2x input dx)
 # can be tuple if you want to do dx and dy seperately (dxm, dym), otherwise dxm is used for both
 dxi = 1  # fining of the grid for spline (e.g., 0.1 means return spline on a grid that is 10x input dx)
 # as with dxm, can be a tuple if you want separate values for dxi and dyi
@@ -364,7 +365,7 @@ targetvar = 0.8 # this is the target variance used in the spline function.
 wbysmooth = 300  # y-edge smoothing scale
 wbxsmooth = 100  # x-edge smoothing scale
 # It is used in conjunction with the MSE from splineCinterp to compute the spline weights (wb)
-dSTR_s = '2012-01-01T00:00:00Z'
+dSTR_s = '2012-02-01T00:00:00Z'
 dSTR_e = '2016-01-01T00:00:00Z'
 
 dir_loc = '/home/david/BathyTroubleshooting/ncFiles'
@@ -384,7 +385,7 @@ splineDict['wbysmooth'] = wbysmooth
 splineDict['wbxsmooth'] = wbxsmooth
 
 # wrappers.makeBathyCBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=scalecDict, splineDict=splineDict)
-wrappers.makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=scalecDict, splineDict=splineDict)
+wrappers.makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=scalecDict, splineDict=splineDict, plot=1)
 
 # ncml_url = 'https://chlthredds.erdc.dren.mil/thredds/dodsC/frf/projects/bathyduck/data/cbathy_old/cbathy.ncml'
 # temp = mBATHY.getGridded(ncml_url=ncml_url,  scalecDict=scalecDict, splineDict=splineDict, plot=1)
