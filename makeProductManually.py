@@ -1,7 +1,7 @@
+import matplotlib 
+matplotlib.use("Agg")
 import wrappers
 import os, glob
-import matplotlib
-matplotlib.use('Agg')
 """ This came from DLY_test, separated now to make cleaner will process/re process gridded data of interest
  will use the last data on thredds previous to start date as background."""
 def runBathyProductManually(version, *args):
@@ -12,7 +12,7 @@ def runBathyProductManually(version, *args):
     :return: a bunch of gridded products
     """
     # list of inputs!!!!!
-    x_smooth = 40  # scale c interp x-direction smoothing
+    x_smooth = 20  # scale c interp x-direction smoothing
     y_smooth = 100  # scale c interp y-direction smoothing
     # splinebctype - this is the type of spline you want to force
     # 2 - second derivative goes to zero at boundary
@@ -26,14 +26,14 @@ def runBathyProductManually(version, *args):
     dxi = 1  # fining of the grid for spline (e.g., 0.1 means return spline on a grid that is 10x input dx)
     # as with dxm, can be a tuple if you want separate values for dxi and dyi
     targetvar = 0.25 # this is the target variance used in the spline function.
-    wbysmooth = 325  # y-edge smoothing scale
+    wbysmooth = 300  # y-edge smoothing scale
     wbxsmooth = 100  # x-edge smoothing scale
     # It is used in conjunction with the MSE from splineCinterp to compute the spline weights (wb)
     if len(args[0]) == 2:
         dSTR_s = args[0][0]
         dSTR_e = args[0][1]
     else:
-        dSTR_s = '2015-09-15T00:00:00Z'
+        dSTR_s = '2008-10-01T00:00:00Z'
         dSTR_e = '2016-10-01T00:00:00Z'
     cBathyYbounds = [0, 1250]
     cBathyXbounds = [0, 500]
