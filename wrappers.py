@@ -300,12 +300,12 @@ def makeBathyCBATHY(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
            plotFuncs.bathyQAQCplots(fig_loc, cBathy['time'][0], updatedBathy=updatedBathy)
 
 
-def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, ncStep='monthly', plot=None):
+def makeBathySurvey(start_datestring, end_datestring, dir_loc, scalecDict=None, splineDict=None, ncStep='monthly', plot=None):
     """
-    :param dSTR_s: string that determines the start date of the times of the surveys you want to use to update the DEM
+    :param start_datestring: string that determines the start date of the times of the surveys you want to use to update the DEM
                     format is  dSTR_s = '2013-01-04T00:00:00Z'
                     no matter what you put here, it will always round it down to the beginning of the month
-    :param dSTR_e: string that determines the end date of the times of the surveys you want to use to update the DEM
+    :param end_datestring: string that determines the end date of the times of the surveys you want to use to update the DEM
                     format is dSTR_e = '2014-12-22T23:59:59Z'
                     no matter what you put here, it will always round it up to the end of the month
     :param dir_loc: place where you want to save the .nc files that get written
@@ -350,52 +350,52 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
     var_yaml = 'yamls/BATHY/FRFti_var.yml'
 
     # check the ncStep input
-    d_s = None
+    start_datetime = None
     ################################################
     # Setup done, now check what file size to make #
     ################################################
     if 'monthly' in ncStep:
         # force the survey to start at the first of the month and end at the last of the month!!!!
-        dSTR_s = dSTR_s[0:7] + '-01T00:00:00Z'
-        if dSTR_e[5:7] == '12':
-            dSTR_e = str(int(dSTR_e[0:4]) + 1) + '-01' + '-01T00:00:00Z'
+        start_datestring = start_datestring[0:7] + '-01T00:00:00Z'
+        if end_datestring[5:7] == '12':
+            end_datestring = str(int(end_datestring[0:4]) + 1) + '-01' + '-01T00:00:00Z'
         else:
-            dSTR_e = dSTR_e[0:5] + str(int(dSTR_e[5:7]) + 1).zfill(2) + '-01T00:00:00Z'
-        d_e = DT.datetime.strptime(dSTR_e, '%Y-%m-%dT%H:%M:%SZ')
-        d_s = DT.datetime.strptime(dSTR_s, '%Y-%m-%dT%H:%M:%SZ')
-        dList = OrderedDict(((d_s + DT.timedelta(_)).strftime(r"%b-%y"), None) for _ in xrange((d_e - d_s).days)).keys()
-        dList = [DT.datetime.strptime(date, r"%b-%y") for date in dList]
-
+            end_datestring = end_datestring[0:5] + str(int(end_datestring[5:7]) + 1).zfill(2) + '-01T00:00:00Z'
+        end_datetime = DT.datetime.strptime(end_datestring, '%Y-%m-%dT%H:%M:%SZ')
+        start_datetime = DT.datetime.strptime(start_datestring, '%Y-%m-%dT%H:%M:%SZ')
+        dateList = OrderedDict(((start_datetime + DT.timedelta(_)).strftime(r"%b-%y"), None) for _ in xrange((end_datetime - start_datetime).days)).keys()
+        dateList = [DT.datetime.strptime(date, r"%b-%y") for date in dateList]
 
     elif 'daily' in ncStep:
         # force the survey to start at the beginning of the day and end at the beginning of the next day
-        dSTR_s = dSTR_s[0:11] + '00:00:00Z'
-        dSTR_e = dSTR_e[0:11] + '00:00:00Z'
-        d_e = DT.datetime.strptime(dSTR_e, '%Y-%m-%dT%H:%M:%SZ')
-        d_e = d_e + DT.timedelta(days=1)
-        d_s = DT.datetime.strptime(dSTR_s, '%Y-%m-%dT%H:%M:%SZ')
-        dList = OrderedDict(((d_s + DT.timedelta(_)), None) for _ in xrange((d_e - d_s).days + 1)).keys()
+        start_datestring = start_datestring[0:11] + '00:00:00Z'
+        end_datestring = end_datestring[0:11] + '00:00:00Z'
+        end_datetime = DT.datetime.strptime(end_datestring, '%Y-%m-%dT%H:%M:%SZ')
+        end_datetime = end_datetime + DT.timedelta(days=1)
+        start_datetime = DT.datetime.strptime(start_datestring, '%Y-%m-%dT%H:%M:%SZ')
+        dateList = OrderedDict(((start_datetime + DT.timedelta(_)), None) for _ in xrange((end_datetime - start_datetime).days + 1)).keys()
 
     else:
-        assert d_s is not None, 'ncStep input not recognized.  Acceptable inputs include daily or monthly.'
+        assert start_datetime is not None, 'ncStep input not recognized.  Acceptable inputs include daily or monthly.'
 
-    # loop time
-    nsteps = np.size(dList) - 1
+    # loop time through months/days to generate most up to date
+    nsteps = np.size(dateList)
     for tt in range(0, nsteps):   # loop through days / months depending on
         # pull out the dates I need for this step( eg days or months, whatever file size is)
-        d1 = dList[tt]
-        d2 = dList[tt + 1]
-        print('\n     Doing Grid at {}\n'.format(d1.date()))
+        d1 = dateList[tt]
+        try:
+            d2 = dateList[tt + 1]  # for historical processing
+        except(IndexError):
+            d2 = DT.datetime.now()  # for live processing
+        print('\nmaking  {} integrated bathymetry Grid for data of {}\n'.format(ncStep, d1.date()))
 
-        # prep the data
         # get the survey data that I need
-        # newDict = mBATHY.getSurveyData(d1, d2)
-        go = getObs(d1,d2)
+        go = getObs(d1, d2)
         newDict = go.getBathyTransectFromNC(forceReturnAll=True)
 
         if newDict == None or (newDict['time'] < go.d1).any() or (newDict['time'] > go.d2).any():
             print('  There are no survey dates found between {} and {}'.format(go.d1, go.d2))
-            continue  # survey is not in my bounds, there are no surveys this month
+            continue  # survey is not in my bounds, eg. there are no surveys this month
         else:
             # create my list of times for each survey
             surveyNumbers = np.unique(newDict['surveyNumber'])
@@ -439,7 +439,7 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
             newDict['profileNumber'] = tempProfNum[indKeepData]
             newDict['surveyTime'] = tempSurvTime[indKeepData]
             stimeMS = min(tempSurvTime[indKeepData]) + (max(tempSurvTime[indKeepData]) - min(tempSurvTime[indKeepData]))/2
-            # rounding epoch to nearest 12 hours
+            # rounding epoch to nearest 12 hours for datestamp of gridded data
             newDict['surveyMeanTime'] = sb.baseRound(nc.date2num(stimeMS, 'seconds since 1970-01-01 00:00:00'), 12 * 3600)
 
             # background data
@@ -453,7 +453,7 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                 # ob_times = nc.num2date(old_bathy.variables['time'][:], old_bathy.variables['time'].units,
                 #                        old_bathy.variables['time'].calendar)
                 # # find newest time prior to this
-                # t_mask = (ob_times <= d_s)  # boolean true/false of time
+                # t_mask = (ob_times <= start_datetime)  # boolean true/false of time
                 # t_idx = np.where(t_mask)[0][-1]  # I want the MOST RECENT ONE - i.e., the last one
                 backgroundDict['updateTime'] = old_bathy.variables['updateTime'][t_idx, :]
                 backgroundDict['elevation'] = old_bathy.variables['elevation'][t_idx, :]
@@ -469,7 +469,7 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
                     # ob_times = nc.num2date(old_bathy.variables['time'][:], old_bathy.variables['time'].units,
                     #                        old_bathy.variables['time'].calendar)
                     # # find newest time prior to this
-                    # t_mask = (ob_times <= d_s)  # boolean true/false of time
+                    # t_mask = (ob_times <= start_datetime)  # boolean true/false of time
                     # t_idx = np.where(t_mask)[0][-1]  # I want the MOST RECENT ONE - i.e., the last one
                     backgroundDict['updateTime'] = old_bathy.variables['updateTime'][t_idx, :]
                     backgroundDict['elevation'] = old_bathy.variables['elevation'][t_idx, :]
