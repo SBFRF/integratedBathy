@@ -382,7 +382,7 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
     # loop time
     nsteps = np.size(dList) - 1
     for tt in range(0, nsteps):   # loop through days / months depending on
-        # pull out the dates I need for this step!
+        # pull out the dates I need for this step( eg days or months, whatever file size is)
         d1 = dList[tt]
         d2 = dList[tt + 1]
         print('\n     Doing Grid at {}\n'.format(d1.date()))
@@ -398,32 +398,32 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
             continue  # survey is not in my bounds, there are no surveys this month
         else:
             # create my list of times for each survey
-            surveys = np.unique(newDict['surveyNumber'])
-            surveyTime = np.zeros(np.shape(surveys))
-            for ss in range(0, len(surveys)):  # loop through the number of surveys in a month
+            surveyNumbers = np.unique(newDict['surveyNumber'])
+            surveyTime = np.zeros(np.shape(surveyNumbers))
+            for ss in range(0, len(surveyNumbers)):  # loop through the number of surveys in a month
                 # get the times of each survey
-                idt = (newDict['surveyNumber'] == surveys[ss])
+                idt = (newDict['surveyNumber'] == surveyNumbers[ss])
                 # convert the times to a single time for each survey
                 stimesS = newDict['time'][idt]
-                if (max(stimesS) - min(stimesS)) > DT.timedelta(days=3):
-                    surveyTime[ss] = -1000
+                # if (max(stimesS) - min(stimesS)) > DT.timedelta(days=3):
+                #     surveyTime[ss] = -999
+                # else:
+                # pull out the mean time
+                stimeMS = min(stimesS) + (max(stimesS) - min(stimesS)) / 2
+                # round it to nearest 12 hours.
+                stimeM = sb.roundtime(stimeMS, roundTo=1 * 6 * 3600) + DT.timedelta(hours=0.25)
+                # check to make sure the mean time is in the month we just pulled
+                if (stimeM >= d1) & (stimeM < d2):
+                    surveyTime[ss] = nc.date2num(stimeM, 'seconds since 1970-01-01 00:00:00')
                 else:
-                    # pull out the mean time
-                    stimeMS = min(stimesS) + (max(stimesS) - min(stimesS)) / 2
-                    # round it to nearest 12 hours.
-                    stimeM = sb.roundtime(stimeMS, roundTo=1 * 6 * 3600) + DT.timedelta(hours=0.25)
-                    # check to make sure the mean time is in the month we just pulled
-                    if (stimeM >= d1) & (stimeM < d2):
-                        timeunits = 'seconds since 1970-01-01 00:00:00'
-                        surveyTime[ss] = nc.date2num(stimeM, timeunits)
-                    else:
-                        surveyTime[ss] = -1000
+                    surveyTime[ss] = -999
 
             # throw out weird surveys
             indKeep = np.where(surveyTime >= 0)
             surveyTime = surveyTime[indKeep]
-            surveys = surveys[indKeep]
-
+            surveys = surveyNumbers[indKeep]
+            if np.size(surveys) < 1:  # if i've removed all the data of interest
+                continue
             # also remove that data from newDict
             tempSurvNum = newDict['surveyNumber']
             tempElev = newDict['elevation']
@@ -438,10 +438,10 @@ def makeBathySurvey(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, n
             newDict['yFRF'] = tempyFRF[indKeepData]
             newDict['profileNumber'] = tempProfNum[indKeepData]
             newDict['surveyTime'] = tempSurvTime[indKeepData]
-            if np.size(surveyTime) > 1:
-                newDict['surveyMeanTime'] = surveyTime[tt]
-            else:
-                newDict['surveyMeanTime'] = surveyTime
+            stimeMS = min(tempSurvTime[indKeepData]) + (max(tempSurvTime[indKeepData]) - min(tempSurvTime[indKeepData]))/2
+            # rounding epoch to nearest 12 hours
+            newDict['surveyMeanTime'] = sb.baseRound(nc.date2num(stimeMS, 'seconds since 1970-01-01 00:00:00'), 12 * 3600)
+
             # background data
             backgroundDict = {}
             try:  # look for the .nc file that I just wrote!!!
