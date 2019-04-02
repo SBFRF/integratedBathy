@@ -450,11 +450,6 @@ def makeBathySurvey(start_datestring, end_datestring, dir_loc, scalecDict=None, 
                 # now find the boolean!
                 mask = (allEpoch < nc.date2num(d1, 'seconds since 1970-01-01'))
                 t_idx = np.where(mask)[0][-1]
-                # ob_times = nc.num2date(old_bathy.variables['time'][:], old_bathy.variables['time'].units,
-                #                        old_bathy.variables['time'].calendar)
-                # # find newest time prior to this
-                # t_mask = (ob_times <= start_datetime)  # boolean true/false of time
-                # t_idx = np.where(t_mask)[0][-1]  # I want the MOST RECENT ONE - i.e., the last one
                 backgroundDict['updateTime'] = old_bathy.variables['updateTime'][t_idx, :]
                 backgroundDict['elevation'] = old_bathy.variables['elevation'][t_idx, :]
 
@@ -466,11 +461,6 @@ def makeBathySurvey(start_datestring, end_datestring, dir_loc, scalecDict=None, 
                     # now find the boolean!
                     mask = (allEpoch < nc.date2num(d1, 'seconds since 1970-01-01'))
                     t_idx = np.where(mask)[0][-1]
-                    # ob_times = nc.num2date(old_bathy.variables['time'][:], old_bathy.variables['time'].units,
-                    #                        old_bathy.variables['time'].calendar)
-                    # # find newest time prior to this
-                    # t_mask = (ob_times <= start_datetime)  # boolean true/false of time
-                    # t_idx = np.where(t_mask)[0][-1]  # I want the MOST RECENT ONE - i.e., the last one
                     backgroundDict['updateTime'] = old_bathy.variables['updateTime'][t_idx, :]
                     backgroundDict['elevation'] = old_bathy.variables['elevation'][t_idx, :]
 
@@ -480,12 +470,9 @@ def makeBathySurvey(start_datestring, end_datestring, dir_loc, scalecDict=None, 
                     old_bathy = nc.Dataset(nc_b_url)
                     backgroundDict['tmBackTog'] = True
                     # it wont have an update time in this case, because it came from the time-mean background.
-                    # so what should go here instead?
-                    tempUpTime = np.zeros(np.shape(old_bathy['elevation']))
-                    tempUpTime[:] = np.nan
+                    tempUpTime = np.ones_like(old_bathy['elevation']) * np.nan
                     backgroundDict['updateTime'] = np.ma.array(tempUpTime, mask=np.ones_like(tempUpTime), fill_value=-999)
                     backgroundDict['elevation'] = old_bathy['elevation'][:]
-
 
             backgroundDict['xFRF'] = old_bathy.variables['xFRF'][:]
             backgroundDict['yFRF'] = old_bathy.variables['yFRF'][:]
@@ -493,16 +480,16 @@ def makeBathySurvey(start_datestring, end_datestring, dir_loc, scalecDict=None, 
             # go time!  this is scaleC + spline!
             out = mBATHY.makeUpdatedBATHY(backgroundDict, newDict, scalecDict=scalecDict, splineDict=splineDict)
             elevation = out['elevation']
-            smoothAL = out['smoothAL']
+            AlongshoreSmoothScale = out['AlongshoreSmoothScale']
             updateTime = out['updateTime']
 
             # check to see if any of the data has nan's.
             # If so that means there were not enough profile lines to create a survey.  Check for and remove them
-            idN = np.isnan(smoothAL)
+            idN = np.isnan(AlongshoreSmoothScale)
             if np.sum(idN) > 0:
                 # drop all NaN stuff
                 elevation = elevation[~idN, :, :]
-                smoothAL = smoothAL[~idN]
+                AlongshoreSmoothScale = AlongshoreSmoothScale[~idN]
                 surveyTime = surveyTime[~idN]
                 surveys = surveys[~idN]
                 updateTime = updateTime[~idN, :, :]
@@ -548,10 +535,10 @@ def makeBathySurvey(start_datestring, end_datestring, dir_loc, scalecDict=None, 
                            'easting': easting,
                            'time': np.array(surveyTime),
                            'surveyNumber': surveys,
-                           'y_smooth': smoothAL,
+                           'y_smooth': AlongshoreSmoothScale,
                            'updateTime': updateTime,}
 
-                # what does the name need to be?
+                # create netCDF file name for output
                 tempD = d1.strftime(r"%Y-%m-%d")
                 if 'monthly' in ncStep:
                     nc_name = 'CMTB-integratedBathyProduct_survey_' + tempD[0:4] + tempD[5:7] + '.nc'

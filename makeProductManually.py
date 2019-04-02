@@ -1,5 +1,5 @@
 import matplotlib 
-matplotlib.use("Agg")
+# matplotlib.use("Agg")
 import wrappers
 import os, glob
 """ This came from DLY_test, separated now to make cleaner will process/re process gridded data of interest
@@ -33,8 +33,8 @@ def runBathyProductManually(version, *args):
         dSTR_s = args[0][0]
         dSTR_e = args[0][1]
     else:
-        dSTR_s = '2008-10-01T00:00:00Z'
-        dSTR_e = '2016-10-01T00:00:00Z'
+        dSTR_s = '2005-10-01T00:00:00Z'
+        dSTR_e = '2019-04-02T00:00:00Z'
     cBathyYbounds = [0, 1250]
     cBathyXbounds = [0, 500]
     scalecDict = {}
@@ -50,7 +50,7 @@ def runBathyProductManually(version, *args):
     splineDict['wbxsmooth'] = wbxsmooth
     # first make survey
     if version == 'survey':
-        wrappers.makeBathySurvey(dSTR_s, dSTR_e, dir_loc='/home/number/thredds_data/integratedBathyProduct/survey', scalecDict=scalecDict, splineDict=splineDict,
+        wrappers.makeBathySurvey(dSTR_s, dSTR_e, dir_loc='/home/number/thredds_data/integratedBathyProduct/extendedSurvey', scalecDict=scalecDict, splineDict=splineDict,
                          ncStep='monthly', plot=True)
     # #then make all cBKF
     elif version == 'cBKF':

@@ -1804,20 +1804,12 @@ def subgridBounds2(surveyDict, gridDict, xMax=1290, maxSpace=149, surveyFilter=F
         # if so, truncate so that it does not exceed.
         if x0 > max(xFRFi_vec):
             x0 = xMax
-        else:
-            pass
         if x1 < min(xFRFi_vec):
             x1 = min(xFRFi_vec)
-        else:
-            pass
         if y0 > max(yFRFi_vec):
             y0 = max(yFRFi_vec)
-        else:
-            pass
         if y1 < min(yFRFi_vec):
             y1 = min(yFRFi_vec)
-        else:
-            pass
 
         out = {}
         out['x0'] = x0
@@ -1831,29 +1823,17 @@ def subgridBounds2(surveyDict, gridDict, xMax=1290, maxSpace=149, surveyFilter=F
             # if so, truncate so that it does not exceed.
             if xS0 > max(xFRFi_vec):
                 xS0 = xMax - dx
-            else:
-                pass
             if xS1 < min(xFRFi_vec):
                 xS1 = min(xFRFi_vec) + dx
-            else:
-                pass
             if yS0 > max(yFRFi_vec):
                 yS0 = max(yFRFi_vec) - dy
-            else:
-                pass
             if yS1 < min(yFRFi_vec):
                 yS1 = min(yFRFi_vec) + dy
-            else:
-                pass
 
             out['xS0'] = xS0
             out['xS1'] = xS1
             out['yS0'] = yS0
             out['yS1'] = yS1
-        else:
-            pass
-
-
 
     return out
 
@@ -1916,7 +1896,7 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
         :key 'xFRF': x coords in FRF for output elevation
         :key 'yFRF': y coords in FRF for output elevation
         :key 'updateTime': 3D masked array that shows the most recent update to each bathymetry node for each time-step.
-        :key MSRi': Mean square residual estimates from scale C interpolation code
+        :key 'MSRi': Mean square residual estimates from scale C interpolation code
         :key 'NMSEi': normalized mean square error estimates from scale C interpolation codes
         :key 'MSEi': Mean square error estimates from scale C interpolation code
         :key 'surveyNumber': optional for survey transects only, 1D array corresponding to the survey numbers for each grid.
@@ -1930,21 +1910,22 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
         y_smooth = scalecDict['y_smooth']  # scale c interp y-direction smoothing
 
     if splineDict is None:
-        splinebctype = 10
-        lc = np.array([4, 12])
-        dxm = 2
-        dxi = 1
-        targetvar = 0.45
-        wbysmooth = 300  # y-edge smoothing scale
-        wbxsmooth = 100  # x-edge smoothing scale
-    else:
-        splinebctype = splineDict['splinebctype']
-        lc = splineDict['lc']
-        dxm = splineDict['dxm']
-        dxi = splineDict['dxi']
-        targetvar = splineDict['targetvar']
-        wbysmooth = splineDict['wbysmooth']
-        wbxsmooth = splineDict['wbxsmooth']
+        # set defaults
+        splineDict= {'splinebctype':10,
+                     'lc': np.array([4,12]),
+                     'dxm': 2,
+                     'dxi':1,
+                     'targetvar': 0.45,
+                     'wbysmooth':300,
+                     'wbxsmooth': 100,}
+    # now unpack dictionary (thedefaults are left in the dictionary incase they get reset below) , do not delete below
+    splinebctype = splineDict['splinebctype']
+    lc = splineDict['lc']
+    dxm = splineDict['dxm']
+    dxi = splineDict['dxi']
+    targetvar = splineDict['targetvar']
+    wbysmooth = splineDict['wbysmooth']
+    wbxsmooth = splineDict['wbxsmooth']
     if not isinstance(lc, np.ndarray):
         lc = np.array(lc)
 
@@ -1992,9 +1973,9 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
     tempUpTime = np.zeros((num_iter, rows, cols))
     tempUpTime[:] = np.nan
     updateTime = np.ma.array(tempUpTime, mask=np.ones(np.shape(elevation)), fill_value=-999)
-    smoothAL = np.empty(num_iter)
+    AlongShoreSmoothScale = np.empty(num_iter)
     elevation[:] = np.nan
-    smoothAL[:] = np.nan
+    AlongShoreSmoothScale[:] = np.nan
     surveyNumber = np.zeros(num_iter)  #initialize variable for survey data, won't be used for gridded input
 
     for tt in range(0, num_iter):  # break into number
@@ -2104,7 +2085,7 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
 
             # here is where we are going to modify the edge spline stuff AND the
             # lc for the bspline if we are starting from the background DEM
-            mod_num = 3  # bumped up to take more time with longer splining scales
+            mod_num = 3                    # bumped up to take more time with longer splining scales
             if ('tmBackTog' in backgroundDict.keys()) & (tt < mod_num) and backgroundDict['tmBackTog'] == True:
                 # what do I want to fiddle with?
                 gridInc = 100
@@ -2191,8 +2172,6 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
                 del dataXn
                 del dataYn
                 del dataZn
-            else:
-                pass
 
             max_spacing = temp['max_spacing']
 
@@ -2238,146 +2217,41 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
 
             # unpack dictionary output
             Zn = out['Zi']
-            MSEn = out['MSEi']
+
             xFRFn_vec = out['x_out']
             yFRFn_vec = out['y_out']
-
+            MSEn = out['MSEi']
+            MSRn = out['MSRi']
+            NMSEn = out['NMSEi']
+            ##############extend the domain by alongshore constant dy/dz on both boundaries by wbysmooth spline distance
+            # first south
+            minFRFvalue = min(yFRFn_vec) - int(wbysmooth)
+            repSizeSouth = (int(wbysmooth/dy), 1)  # how many cells to repeat over
+            if minFRFvalue < min(yFRFi_vec):       # if the spline length goes beyond the background grid
+                minFRFvalue = min(yFRFi_vec)
+                repSizeSouth = (int((yFRFn_vec.min() - yFRFi_vec.min())/dy), 1)
+            southernExtensionElev = np.tile(Zn[0], repSizeSouth)
+            southernExtensionMSEn = np.tile(MSEn[0], repSizeSouth)
+            southernExtensionMSRn = np.tile(MSRn[0], repSizeSouth)
+            southernExtensionNMSEn = np.tile(NMSEn[0], repSizeSouth)
+            # Then north
+            maxFRFvalue = max(yFRFn_vec) + dy + int(wbysmooth)
+            repSizeNorth = (int(wbysmooth / dy), 1)  # how many cells to repeat over
+            if maxFRFvalue > max(yFRFi_vec):
+                maxFRFvalue = max(yFRFi_vec)
+                repSizeNorth = (int((yFRFn_vec.max() - yFRFi_vec.max())/dy), 1)
+            northernExtensionElev = np.tile(Zn[-1], repSizeNorth)
+            northernExtensionMSEn = np.tile(MSEn[-1], repSizeNorth)
+            northernExtensionMSRn = np.tile(MSRn[0], repSizeNorth)
+            northernExtensionNMSEn = np.tile(NMSEn[0], repSizeNorth)
+            # now combine
+            Zn = np.concatenate((southernExtensionElev, Zn, northernExtensionElev), axis=0)
+            MSEn = np.concatenate((southernExtensionMSEn, MSEn, northernExtensionMSEn), axis=0)
+            MSRn = np.concatenate((southernExtensionMSRn, MSRn, northernExtensionMSRn), axis=0)
+            NMSEn= np.concatenate((southernExtensionNMSEn, NMSEn, northernExtensionNMSEn), axis=0)
+            yFRFn_vec = np.arange(minFRFvalue, maxFRFvalue , dy)
             # make my the mesh for the new subgrid
             xFRFn, yFRFn = np.meshgrid(xFRFn_vec, yFRFn_vec)
-
-            """
-            # BEGIN DLY DELETE SECTION
-            # plot my new subgrid before it gets splined
-            fig_loc = '/home/david/BathyTroubleshooting/smoothingTest'
-            dSTR = DT.datetime.strftime(nc.num2date(newDict['surveyMeanTime'][tt], u'seconds since 1970-01-01 00:00:00', u'gregorian'), '%Y-%m-%dT%H:%M:%SZ')
-
-            # zoomed in pcolor plot on AOI
-            fig_name = 'testBathy_' + dSTR[0:10] + '.png'
-            plt.figure()
-            plt.pcolor(xFRFn, yFRFn, Zn, cmap=plt.cm.jet, vmin=-13, vmax=5)
-            cbar = plt.colorbar()
-            cbar.set_label('(m)')
-            axes = plt.gca()
-            plt.xlabel('xFRF (m)')
-            plt.ylabel('yFRF (m)')
-            plt.savefig(os.path.join(fig_loc, fig_name))
-            plt.close()
-
-            # alongshore transect plots
-            x_loc_check1 = int(100)
-            x_loc_check2 = int(200)
-            x_loc_check3 = int(350)
-            x_check1 = np.where(xFRFn_vec == x_loc_check1)[0][0]
-            x_check2 = np.where(xFRFn_vec == x_loc_check2)[0][0]
-            x_check3 = np.where(xFRFn_vec == x_loc_check3)[0][0]
-
-            # plot X and Y transects from newZdiff to see if it looks correct?
-            fig_name = 'testBathy_' + dSTR[0:10] + '_Ytrans' + '_YS%s'%(str(y_smooth_u)) + '.png'
-
-            fig = plt.figure(figsize=(8, 9))
-            ax1 = plt.subplot2grid((3, 1), (0, 0), colspan=1)
-            ax1.plot(yFRFn_vec, Zn[:, x_check1], 'r')
-            ax1.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
-            ax1.set_ylabel('Elevation ($m$)', fontsize=16)
-            ax1.set_title('$X=%s$' % (str(x_loc_check1)), fontsize=16)
-            for tick in ax1.xaxis.get_major_ticks():
-                tick.label.set_fontsize(14)
-            for tick in ax1.yaxis.get_major_ticks():
-                tick.label.set_fontsize(14)
-            ax1.tick_params(labelsize=14)
-            ax1.text(0.10, 0.95, '(a)', horizontalalignment='left', verticalalignment='top',
-                     transform=ax1.transAxes, fontsize=16)
-
-            ax2 = plt.subplot2grid((3, 1), (1, 0), colspan=1)
-            ax2.plot(yFRFn_vec, Zn[:, x_check2], 'r')
-            ax2.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
-            ax2.set_ylabel('Elevation ($m$)', fontsize=16)
-            ax2.set_title('$X=%s$' % (str(x_loc_check2)), fontsize=16)
-            for tick in ax2.xaxis.get_major_ticks():
-                tick.label.set_fontsize(14)
-            for tick in ax2.yaxis.get_major_ticks():
-                tick.label.set_fontsize(14)
-            ax2.tick_params(labelsize=14)
-            ax2.text(0.10, 0.95, '(b)', horizontalalignment='left', verticalalignment='top',
-                     transform=ax2.transAxes, fontsize=16)
-
-            ax3 = plt.subplot2grid((3, 1), (2, 0), colspan=1)
-            ax3.plot(yFRFn_vec, Zn[:, x_check3], 'r', label='Original')
-            ax3.set_xlabel('Alongshore - $y$ ($m$)', fontsize=16)
-            ax3.set_ylabel('Elevation ($m$)', fontsize=16)
-            ax3.set_title('$X=%s$' % (str(x_loc_check3)), fontsize=16)
-            for tick in ax3.xaxis.get_major_ticks():
-                tick.label.set_fontsize(14)
-            for tick in ax3.yaxis.get_major_ticks():
-                tick.label.set_fontsize(14)
-            ax3.tick_params(labelsize=14)
-            ax3.text(0.10, 0.95, '(c)', horizontalalignment='left', verticalalignment='top',
-                     transform=ax3.transAxes, fontsize=16)
-
-            fig.subplots_adjust(wspace=0.4, hspace=0.1)
-            fig.tight_layout(pad=1, h_pad=2.5, w_pad=1, rect=[0.0, 0.0, 1.0, 0.925])
-            fig.savefig(os.path.join(fig_loc, fig_name), dpi=300)
-            plt.close()
-
-            # cross-shore transect plots
-            y_loc_check1 = int(250)
-            y_loc_check2 = int(500)
-            y_loc_check3 = int(750)
-            y_check1 = np.where(yFRFn_vec == y_loc_check1)[0][0]
-            y_check2 = np.where(yFRFn_vec == y_loc_check2)[0][0]
-            y_check3 = np.where(yFRFn_vec == y_loc_check3)[0][0]
-            # plot a transect going in the cross-shore just to check it
-            fig_name = 'testBathy_' + dSTR[0:10] + '_Xtrans' + '_XS%s'%(str(x_smooth)) + '.png'
-
-            fig = plt.figure(figsize=(8, 9))
-            ax1 = plt.subplot2grid((3, 1), (0, 0), colspan=1)
-            ax1.plot(xFRFn_vec, Zn[y_check1, :], 'b')
-            ax1.set_xlabel('Cross-shore - $x$ ($m$)', fontsize=16)
-            ax1.set_ylabel('Elevation ($m$)', fontsize=16)
-            ax1.set_title('$Y=%s$' % (str(y_loc_check1)), fontsize=16)
-            for tick in ax1.xaxis.get_major_ticks():
-                tick.label.set_fontsize(14)
-            for tick in ax1.yaxis.get_major_ticks():
-                tick.label.set_fontsize(14)
-            ax1.tick_params(labelsize=14)
-            ax1.text(0.10, 0.95, '(a)', horizontalalignment='left', verticalalignment='top',
-                     transform=ax1.transAxes, fontsize=16)
-
-            ax2 = plt.subplot2grid((3, 1), (1, 0), colspan=1)
-            ax2.plot(xFRFn_vec, Zn[y_check2, :], 'b')
-            ax2.set_xlabel('Cross-shore - $x$ ($m$)', fontsize=16)
-            ax2.set_ylabel('Elevation ($m$)', fontsize=16)
-            ax2.set_title('$Y=%s$' % (str(y_loc_check2)), fontsize=16)
-            for tick in ax2.xaxis.get_major_ticks():
-                tick.label.set_fontsize(14)
-            for tick in ax2.yaxis.get_major_ticks():
-                tick.label.set_fontsize(14)
-            ax2.tick_params(labelsize=14)
-            ax2.text(0.10, 0.95, '(b)', horizontalalignment='left', verticalalignment='top',
-                     transform=ax2.transAxes, fontsize=16)
-
-            ax3 = plt.subplot2grid((3, 1), (2, 0), colspan=1)
-            ax3.plot(xFRFn_vec, Zn[y_check3, :], 'b')
-            ax3.set_xlabel('Cross-shore - $x$ ($m$)', fontsize=16)
-            ax3.set_ylabel('Elevation ($m$)', fontsize=16)
-            ax3.set_title('$Y=%s$' % (str(y_loc_check3)), fontsize=16)
-            for tick in ax3.xaxis.get_major_ticks():
-                tick.label.set_fontsize(14)
-            for tick in ax3.yaxis.get_major_ticks():
-                tick.label.set_fontsize(14)
-            ax3.tick_params(labelsize=14)
-            ax3.text(0.10, 0.95, '(c)', horizontalalignment='left', verticalalignment='top',
-                     transform=ax3.transAxes, fontsize=16)
-
-            fig.subplots_adjust(wspace=0.4, hspace=0.1)
-            fig.tight_layout(pad=1, h_pad=2.5, w_pad=1, rect=[0.0, 0.0, 1.0, 0.925])
-            fig.savefig(os.path.join(fig_loc, fig_name), dpi=300)
-            plt.close()
-            t = 1
-            # END DLY DELETE SECTION
-            """
-
-
 
             # where does this subgrid fit in my larger background grid?
             x1 = np.where(xFRFi_vec == min(xFRFn_vec))[0][0]
@@ -2386,21 +2260,21 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
             y2 = np.where(yFRFi_vec == max(yFRFn_vec))[0][0]
             Zi_s = Zi[y1:y2 + 1, x1:x2 + 1]
 
-            # get the difference!!!!
+            # get the perterbation of the new grid(Zn) from the background grid (Zi)
             Zdiff = Zn - Zi_s
             #################################################
-            # spline time                                   #
+            #               spline time                     #
             #################################################
             MSEn = np.power(MSEn, 2)
             wb = 1 - np.divide(MSEn, targetvar + MSEn)
-
+            # ax/y is tukey window length scale taken from here https://en.wikipedia.org/wiki/Window_function#Tukey_window
             wb_dict = {'x_grid': xFRFn,
                        'y_grid': yFRFn,
-                       'ax': wbxsmooth / float(max(xFRFn_vec)),
-                       'ay': wbysmooth / float(max(yFRFn_vec)),}
+                       'ax': wbxsmooth * 2 / ((max(xFRFn_vec)- min(xFRFn_vec))),
+                       'ay': wbysmooth *2 / ((max(yFRFn_vec)- min(yFRFn_vec)))}
 
-            wb_spline = makeWBflow2D(wb_dict)  # this produces the 2D shape of the normalized weights for the spline
-            wb = np.multiply(wb, wb_spline)    # brings in the error estimates from the interpolation
+            wb_spline = makeWBflow2D(wb_dict)     # this produces the 2D shape of the normalized weights for the spline
+            wb = np.multiply(wb, wb_spline)       # brings in the error estimates from the interpolation
             t = DT.datetime.now()
             newZdiff = bspline_pertgrid(Zdiff, wb, splinebctype=splinebctype, lc=lc, dxm=dxm, dxi=dxi)
             print('splining Took {} seconds'.format(DT.datetime.now() - t))
@@ -2422,9 +2296,7 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
 
         # make sure these reset to the original values
         if splineDict is None:
-            lc = 4
-            wbysmooth = 300  # y-edge smoothing scale
-            wbxsmooth = 100  # x-edge smoothing scale
+            raise NotImplementedError('This should never happen, you deleted what i told you not to')
         else:
             lc = splineDict['lc']
             wbysmooth = splineDict['wbysmooth']
@@ -2434,17 +2306,17 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
         elevation[tt, :, :] = newZi
         updateTime[tt, :, :] = updateMATi
         # get errors out
-        MSRi[tt, y1:y2 + 1, x1:x2 + 1] = out['MSRi']
-        NMSEi[tt, y1:y2 + 1, x1:x2 + 1] = out['NMSEi']
-        MSEi[tt, y1:y2 + 1, x1:x2 + 1] = out['MSEi']
-        smoothAL[tt] = y_smooth_u
+        MSRi[tt, y1:y2 + 1, x1:x2 + 1] = MSRn
+        NMSEi[tt, y1:y2 + 1, x1:x2 + 1] = NMSEn
+        MSEi[tt, y1:y2 + 1, x1:x2 + 1] = MSEn
+        AlongShoreSmoothScale[tt] = y_smooth_u
         if gridFlag != True:
             surveyNumber[tt] = np.unique(survNum)[0]
     ####################################################
     # build output dictionary (include Error estimates)#
     ####################################################
     output = {'elevation':  elevation,
-              'smoothAL':   smoothAL,
+              'smoothAL':   AlongShoreSmoothScale,
               'xFRF':       xFRFi_vec,
               'yFRF':       yFRFi_vec,
               'updateTime': updateTime,
@@ -2458,281 +2330,3 @@ def makeUpdatedBATHY(backgroundDict, newDict, scalecDict=None, splineDict=None):
         output['time'] =    newDict['epochtime']
 
     return output
-
-def makeBATHYfromSurvey(d1, scalecDict=None, gridDict=None):
-
-    raise SystemError('This code is depricated (or update and document usage 3/31/18')
-    # check scalecDict
-    if scalecDict is None:
-        x_smooth = 100  # scale c interp x-direction smoothing
-        y_smooth = 200  # scale c interp y-direction smoothing
-    else:
-        x_smooth = scalecDict['x_smooth']  # scale c interp x-direction smoothing
-        y_smooth = scalecDict['y_smooth']  # scale c interp y-direction smoothing
-
-    #this is the ncml for the surveys!!!!
-    survey_ncml = 'http://134.164.129.55/thredds/dodsC/FRF/geomorphology/elevationTransects/survey/surveyTransects.ncml'
-
-    # ok, now to make my nc files, I just need to go through and find all surveys that fall in these months
-    bathy = nc.Dataset(survey_ncml)
-    # pull down all the times....
-    times = nc.num2date(bathy.variables['time'][:], bathy.variables['time'].units, bathy.variables['time'].calendar)
-    # and all the survey numbers
-    all_surveys = bathy.variables['surveyNumber'][:]
-    # find some stuff here...
-    mask = (times <= d1)  # boolean true/false of time
-    idx = np.where(mask)[0]
-    # what is the latest survey in this group?
-    survey_num = np.max(np.unique(bathy.variables['surveyNumber'][idx]))
-    # get the times of each survey
-    ids = (all_surveys == survey_num)
-
-    # pull out this NC stuf!!!!!!!!
-    dataX, dataY, dataZ = [], [], []
-    dataX = bathy['xFRF'][ids]
-    dataY = bathy['yFRF'][ids]
-    dataZ = bathy['elevation'][ids]
-    profNum = bathy['profileNumber'][ids]
-
-    # what are my subgrid bounds?
-    surveyDict = {}
-    surveyDict['dataX'] = dataX
-    surveyDict['dataY'] = dataY
-    surveyDict['profNum'] = profNum
-
-    if gridDict is None:
-        gridDict = {}
-        dx = 5
-        dy = 5
-        gridDict['dx'] = dx
-        gridDict['dy'] = dx
-        gridDict['xFRFi_vec'] = np.array(range(int(min(surveyDict['dataX'])), int(max(surveyDict['dataX']) + dx), int(dx)))
-        gridDict['yFRFi_vec'] = np.array(range(int(min(surveyDict['dataY'])), int(max(surveyDict['dataY']) + dy), int(dy)))
-    else:
-        pass
-
-    maxSpace = 249
-    surveyFilter = False
-    temp = subgridBounds2(surveyDict, gridDict, maxSpace=maxSpace, surveyFilter=surveyFilter)
-
-    x0 = temp['x0']
-    x1 = temp['x1']
-    y0 = temp['y0']
-    y1 = temp['y1']
-
-    if surveyFilter is True:
-        xS0 = temp['xS0']
-        xS1 = temp['xS1']
-        yS0 = temp['yS0']
-        yS1 = temp['yS1']
-        # throw out all points in the survey that are outside of these bounds!!!!
-        test1 = np.where(dataX <= xS0, 1, 0)
-        test2 = np.where(dataX >= xS1, 1, 0)
-        test3 = np.where(dataY <= yS0, 1, 0)
-        test4 = np.where(dataY >= yS1, 1, 0)
-        test_sum = test1 + test2 + test3 + test4
-        dataXn = dataX[test_sum >= 4]
-        dataYn = dataY[test_sum >= 4]
-        dataZn = dataZ[test_sum >= 4]
-        del dataX
-        del dataY
-        del dataZ
-        dataX = dataXn
-        dataY = dataYn
-        dataZ = dataZn
-        del dataXn
-        del dataYn
-        del dataZn
-    else:
-        pass
-
-    max_spacing = temp['max_spacing']
-
-    # if the max spacing is too high, bump up the smoothing!!
-    y_smooth_u = y_smooth  # reset y_smooth if I changed it during last step
-    if max_spacing is None:
-        pass
-    elif 2 * max_spacing > y_smooth:
-        y_smooth_u = int(dy * round(float(2 * max_spacing) / dy))
-    else:
-        pass
-
-    del temp
-
-    if x0 is None:
-        returnDict = {}
-
-    else:
-
-        dict = {'x0': x0,  # gp.FRFcoord(x0, y0)['Lon'],  # -75.47218285,
-                'y0': y0,  # gp.FRFcoord(x0, y0)['Lat'],  #  36.17560399,
-                'x1': x1,  # gp.FRFcoord(x1, y1)['Lon'],  # -75.75004989,
-                'y1': y1,  # gp.FRFcoord(x1, y1)['Lat'],  #  36.19666112,
-                'lambdaX': dx,
-                # grid spacing in x  -  Here is where CMS would hand array of variable grid spacing
-                'lambdaY': dy,  # grid spacing in y
-                'msmoothx': x_smooth,  # smoothing length scale in x
-                'msmoothy': y_smooth_u,  # smoothing length scale in y
-                'msmootht': 1,  # smoothing length scale in Time
-                'filterName': 'hanning',
-                'nmseitol': 0.25,
-                'grid_coord_check': 'FRF',
-                'grid_filename': '',  # should be none if creating background Grid!  becomes best guess grid
-                'data_coord_check': 'FRF',
-                'xFRF_s': dataX,
-                'yFRF_s': dataY,
-                'Z_s': dataZ,
-                }
-
-        out = DEM_generator(dict)
-
-        # read some stuff from this dict like a boss
-        returnDict = {}
-        returnDict['elevation'] = out['Zi']
-        returnDict['xFRF'] = out['x_out']
-        returnDict['yFRF'] = out['y_out']
-
-    return returnDict
-
-def getSurveyData(d1, d2):
-    """
-    get the survey data from [hardcoded] local thredds server
-    :param d1: start
-    :param d2: end
-    :return: dictionary
-        :key 'elevation': bathy elevation
-        :key 'xFRF': xlocation in FRF
-        :key 'yFRF': Y location frf
-        :key 'profileNumber': profile number
-        :key 'surveyNumber': frf survey number
-        :key 'surveyTime': time of the survey
-
-    """
-    # survey ncml file name
-    survey_ncml = 'http://134.164.129.55/thredds/dodsC/FRF/geomorphology/elevationTransects/survey/surveyTransects.ncml'
-
-    # get the survey data that I need
-    bathy = nc.Dataset(survey_ncml)
-    # pull down all the times....
-    times = nc.num2date(bathy.variables['time'][:], bathy.variables['time'].units, bathy.variables['time'].calendar)
-    all_surveys = bathy.variables['surveyNumber'][:]
-
-    # find some stuff here...
-    mask = (times >= d1) & (times < d2)  # boolean true/false of time
-    idx = np.where(mask)[0]
-    # what surveys are in this range?
-    surveys = np.unique(bathy.variables['surveyNumber'][idx])
-
-    # if there are no surveys here, then skip the rest of this loop...
-    if len(surveys) < 1:
-        print('No surveys found for ' + d1.strftime('%Y-%m-%dT%H:%M:%SZ') + ' to ' + d2.strftime('%Y-%m-%dT%H:%M:%SZ'))
-
-        # pack all this up and return to user
-        outDict = {}
-        outDict['elevation'] = None
-        outDict['xFRF'] = None
-        outDict['yFRF'] = None
-        outDict['profileNumber'] = None
-        outDict['surveyNumber'] = None
-        outDict['surveyTime'] = None
-
-    else:
-
-        # otherwise..., check to see the times of all the surveys...?
-        for tt in range(0, len(surveys)):
-            ids = (all_surveys == surveys[tt])
-            surv_times = times[ids]
-            # pull out the mean time
-            surv_timeM = surv_times[0] + (surv_times[-1] - surv_times[0]) / 2
-            # round it to nearest 12 hours.
-            surv_timeM = sb.roundtime(surv_timeM, roundTo=1 * 6 * 3600) + DT.timedelta(hours=0.5)
-            # if the rounded time IS in the month, great
-            if (surv_timeM >= d1) and (surv_timeM < d2):
-                pass
-            else:
-                # if not set it to a fill value
-                surveys[tt] == -1000
-        # drop all the surveys that we decided are not going to go into this monthly file!
-        surveys = surveys[surveys >= 0]
-
-        # what data do I need to include?
-        ids = np.zeros(np.shape(all_surveys), dtype=bool)
-        for tt in range(0, len(all_surveys)):
-            if all_surveys[tt] in surveys:
-                ids[tt] = True
-            else:
-                pass
-
-        # pull out this NC stuf!!!!!!!!
-        dataX, dataY, dataZ = [], [], []
-        dataX = bathy['xFRF'][ids]
-        dataY = bathy['yFRF'][ids]
-        dataZ = bathy['elevation'][ids]
-        profNum = bathy['profileNumber'][ids]
-        survNum = bathy['surveyNumber'][ids]
-        stimes = nc.num2date(bathy.variables['time'][ids], bathy.variables['time'].units, bathy.variables['time'].calendar)
-
-        # pack all this up and return to user
-        outDict = {}
-        outDict['elevation'] = dataZ
-        outDict['xFRF'] = dataX
-        outDict['yFRF'] = dataY
-        outDict['profileNumber'] = profNum
-        outDict['surveyNumber'] = survNum
-        outDict['surveyTime'] = stimes
-
-    return outDict
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

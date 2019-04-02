@@ -31,6 +31,7 @@ def bathyQAQCplots(fig_loc, d1, updatedBathy):
         fig_name = 'DEM_' + d1.strftime('%Y%m%dT%H%M%SZ') + '.png'
         plt.figure()
         plt.pcolormesh(xFRF, yFRF, updatedBathy['elevation'][t, :, :], cmap=plt.cm.jet, vmin=-13, vmax=5)
+        plt.contour(xFRF, yFRF, updatedBathy['elevation'][t, :, :], color='black')
         cbar = plt.colorbar()
         cbar.set_label('(m)')
         axes = plt.gca()

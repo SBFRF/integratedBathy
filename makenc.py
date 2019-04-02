@@ -729,8 +729,7 @@ def makenc_t0BATHY(ofname, dataDict, globalYaml, varYaml):
     fid.close()
 
 def makenc_tiBATHY(ofname, dataDict, globalYaml, varYaml):
-    """
-    # this is the script that builds the monthly ti netCDF file by incorporating the new survey data into the most recent Bathy DEM
+    """this is the script that builds the monthly ti netCDF file by incorporating the new survey data into the most recent Bathy DEM
 
     :param ofname: this is the name of the ncfile you are building
     :param dataDict: keys must include...
