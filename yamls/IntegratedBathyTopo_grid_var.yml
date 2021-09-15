@@ -1,0 +1,93 @@
+_variables: ['time', 'xFRF', 'yFRF', 'latitude', 'longitude', 'elevation',  'updateTime', 'survey_time']
+_attributes: ['notes']
+_dimensions: ['time', 'yFRF', 'xFRF', 'survey_time']
+
+time:
+    name: 'time'
+    units: 'seconds since 1970-01-01 00:00:00'
+    standard_name: 'time'
+    notes: 'UTC 00:00 hours of day product calculated'
+    data_type: 'f8'
+    dim: ['time']
+    calendar: 'gregorian'
+    fill_value: '-999'
+
+survey_time:
+    name: 'survey_time'
+    units: 'seconds since 1970-01-01 00:00:00'
+    standard_name: 'survey_time'
+    notes: 'UTC Survey Date of the midpoint of the survey rounded to nearest 12 hrs'
+    data_type: 'f8'
+    dim: ['survey_time']
+    calendar: 'gregorian'
+    fill_value: '-999'
+
+updateTime:
+    name: 'updateTime'
+    units: 'seconds since 1970-01-01 00:00:00'
+    notes: 'Survey time of the most recent update to this particular cell of the integrated bathy topo product.'
+    data_type: 'f8'
+    dim: ['time', 'yFRF', 'xFRF']
+    calendar: 'gregorian'
+    fill_value: '-999'
+    least_significant_digit: 2
+    comp_level: 6
+
+yFRF:
+    name: 'yFRF'
+    units: 'm'
+    long_name: 'along-shore position of each node - m'
+    data_type: 'f8'
+    dim: ['yFRF']
+    fill_value: '-999'
+    short_name: 'yFRF'
+    notes: 'along-shore position of each node in m FRF coordinates'
+    least_significant_digit: 2
+    comp_level: 6
+
+xFRF:
+    name: 'xFRF'
+    units: 'm'
+    long_name: 'cross-shore position of each node - m'
+    data_type: 'f8'
+    dim: ['xFRF']
+    fill_value: '-999'
+    short_name: 'xFRF'
+    notes: 'cross-shore position of each node in m FRF coordinates'
+    least_significant_digit: 2
+    comp_level: 6
+
+elevation:
+    name: 'elevation'
+    units: 'm'
+    long_name: 'bed elevation for the bathymetry nodes'
+    data_type: 'f8'
+    dim: ['time', 'yFRF', 'xFRF']
+    fill_value: '-999'
+    short_name: 'bathy'
+    notes: 'Bottom elevation for the bathymetry nodes after incorporating the numbered survey in NAVD88'
+    least_significant_digit: 2
+    comp_level: 6
+
+latitude:
+    name: 'latitude'
+    units: 'Degrees'
+    standard_name: 'latitude'
+    long_name: 'Latitude of each bathymetry node in decimal degrees'
+    data_type: 'f8'
+    dim: ['yFRF', 'xFRF']
+    fill_value: '-999'
+    short_name: 'lat'
+    notes: 'Latitude of the bathymetry nodes in decimal degrees'
+
+longitude:
+    name: 'longitude'
+    units: 'Degrees'
+    standard_name: 'longitude'
+    long_name: 'Longitude of each bathymetry node in decimal degrees'
+    data_type: 'f8'
+    dim: ['yFRF', 'xFRF']
+    fill_value: '-999'
+    short_name: 'lon'
+    notes: 'Longitude of the bathymetry nodes in decimal degrees'
+
