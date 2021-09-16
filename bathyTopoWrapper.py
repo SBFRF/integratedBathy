@@ -1,4 +1,5 @@
 import os
+import argparse
 import numpy as np
 import netCDF4 as nc
 import datetime as dt
@@ -204,7 +205,21 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
 
 if __name__=="__main__":
 
-    day='2021-07-21'
+    def check_datestring(s):
+        try:
+            return dt.datetime.strptime(s, "%Y-%m-%d")
+        except ValueError:
+            msg = "Not a valid date: '{0}'.".format(s)
+            raise argparse.ArgumentTypeError(msg)
+    
+    parser = argparse.ArgumentParser(description="Input for daily bathy-topo product")
+
+    parser.add_argument('day',
+                        help="Day for computing bathy-topo product - format YYYY-MM-DD", 
+                        type=check_datestring)
+                        
+    args = parser.parse_args()
+    
     output_dir='./products'
-    gridded_bathy = generateDailyGriddedTopo(day, output_dir, verbose=1,
+    gridded_bathy = generateDailyGriddedTopo(args.day.strftime("%Y-%m-%d"), output_dir, verbose=1,
                                              datacache=os.path.join(os.path.curdir,'datacache'))
