@@ -45,8 +45,8 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
     ## setup start and end dates
     # force to start at 00:00:00Z
     dSTR_s0 = dSTR_s[0:10]+'T00:00:00Z'
-    d1 = dt.datetime.strptime(dSTR_s0, '%Y-%m-%dT%H:%M:%SZ')
-    d2 = dt.timedelta(days=1)+d1
+    d2 = dt.datetime.strptime(dSTR_s0, '%Y-%m-%dT%H:%M:%SZ')
+    d1 = d2 - dt.timedelta(days=1)
     if verbose > 0:
         print("Trying to run from {0} to {1}".format(d1.date(),d2.date()))
         
@@ -211,6 +211,9 @@ if __name__=="__main__":
     else:
         day = args[0]
         # '2021-07-21'
-    output_dir='./products'
+    if len(args) < 1:
+        output_dir = "/thredds_data/integratedBathyProduct/integratedBathyTopo"
+    else:
+        output_dir='./products'
     gridded_bathy = generateDailyGriddedTopo(day, output_dir, verbose=1,
                                              datacache=None)
