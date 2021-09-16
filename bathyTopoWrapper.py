@@ -18,7 +18,8 @@ yaml_dir=os.path.join(os.path.abspath(os.path.dirname(__file__)),'yamls')  #even
 
 
 def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.), yFRF_lim=(0,1400.), dxFRF=(5.,5.),
-                             verbose=0, datacache=None, cross_check_fraction=None, plotdir=None, server=None):
+                             verbose=0, datacache=None, cross_check_fraction=None, plotdir=None, server=None,
+                             clip4bathy=True):
     """
     :param dSTR_s: string that determines the start date of the times of the surveys you want to use to update the DEM
                     format is  dSTR_s = '2013-01-04'
@@ -178,9 +179,12 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
     else:
         bathy_data = go.getBathyTransectFromNC()
 
+    Y_bathy_max,Y_bathy_min=None,None
     if bathy_data is not None:
         bathy_points=np.vstack((bathy_data['xFRF'],bathy_data['yFRF'])).T
         bathy_values=bathy_data['elevation']
+        Y_bathy_max=bathy_data['yFRF'].max()
+        Y_bathy_min=bathy_data['yFRF'].min()
     else:
         print('WARNING bathy points failed to download!')
         bathy_points=np.empty(shape=(0,2))
@@ -211,13 +215,21 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
         diff=check_values-Z_check
         RMSE=np.sqrt(np.sum(diff**2)/float(diff.size))
         print('RMSE on {0}% random points is {1}'.format(cross_check_fraction,RMSE))
+
+        
     ## extend in the alongshore to the grid boundaries
+    ## because we are concerned primariy about bathymetry, remove any points outside the survey bounds
+    if Y_bathy_max is not None and Y_bathy_min is not None and clip4bathy:
+        Z_interp_clipped=np.where(np.logical_and(YY <= Y_bathy_max, YY >= Y_bathy_min),Z_interp,np.nan)
+        Z_interp_orig=Z_interp.copy()
+        Z_interp=Z_interp_clipped
     Y_start_index,Y_end_index,Z_gridded=dut.extend_alongshore(XX,YY,Z_interp)
 
     if plotdir is not None and os.path.isdir(plotdir):
         dut.plot_bathy2d(XX,YY,Z_gridded,cross_check_fraction,RMSE,d1.date(),plotdir=plotdir)
         dut.plot_bathy2d(XX,YY,Z_interp,cross_check_fraction,RMSE,str(d1.date())+'-unextended',plotdir=plotdir)
         dut.plot_bathy2d_with_obs(XX,YY,Z_gridded,points,cross_check_fraction,RMSE,str(d1.date())+'-with-obs',plotdir=plotdir)
+        dut.plot_bathy2d_with_obs(XX,YY,Z_interp,points,cross_check_fraction,RMSE,str(d1.date())+'-unextended-with-obs',plotdir=plotdir)
     
     ## 
     ## Write out the gridded product
