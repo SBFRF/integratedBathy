@@ -1,7 +1,9 @@
 #! /usr/bin/env python
 
+import os
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import datetime as dt
 import scipy
 from scipy import interpolate
@@ -76,3 +78,35 @@ def extract_values_and_points(points,values,fraction):
     new_values=np.delete(values,inds)
     new_points=np.delete(points,inds,axis=0)
     return extracted_points,extracted_values,new_points,new_values,inds
+
+def plot_bathy2d(XX,YY,ZZ,error_fraction,error_estimate,datelabel,plotdir=os.path.curdir):
+    assert os.path.isdir(plotdir), '{0} not a valid directory'.format(plotdir)
+    
+    mpl.rcParams['axes.linewidth']=2
+    mpl.rcParams['axes.labelweight']='bold'
+    mpl.rcParams['axes.titlesize']=16
+    mpl.rcParams['axes.titleweight']='bold'
+    mpl.rcParams['axes.labelsize']='large'
+    mpl.rcParams['font.size']=16
+    mpl.rcParams['xtick.labelsize']='large'
+    mpl.rcParams['ytick.labelsize']='large'
+
+    fig=plt.figure(figsize=(12,14))
+    ax = fig.add_subplot(111)
+
+    im=ax.pcolor(XX,YY,ZZ,shading='auto',cmap=plt.get_cmap('gist_earth'))
+    title='Gridded Topo and Bathymetry for {0}\n'.format(datelabel)
+    if error_fraction is not None and error_estimate is not None:
+        title+='{0}% cross-validation error {1:7.5f}'.format(100.*float(error_fraction),float(error_estimate))
+    ax.set_title(title)
+                                                                                                         
+    ax.set_xlabel('X FRF [m]')
+    ax.set_ylabel('Y FRF [m]')
+
+    fig.colorbar(im)
+
+    plotname='griddedTopoBathy_{0}.png'.format(datelabel)
+    plt.savefig(os.path.join(plotdir,plotname))
+
+    return fig
+

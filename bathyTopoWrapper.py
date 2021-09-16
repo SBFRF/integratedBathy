@@ -18,7 +18,7 @@ yaml_dir=os.path.join(os.path.abspath(os.path.dirname(__file__)),'yamls')  #even
 
 
 def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.), yFRF_lim=(0,1400.), dxFRF=(5.,5.),
-                             verbose=0, datacache=None, cross_check_fraction=None):
+                             verbose=0, datacache=None, cross_check_fraction=None, plotdir=None):
     """
     :param dSTR_s: string that determines the start date of the times of the surveys you want to use to update the DEM
                     format is  dSTR_s = '2013-01-04'
@@ -206,6 +206,9 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
     ## extend in the alongshore to the grid boundaries
     Y_start_index,Y_end_index,Z_gridded=dut.extend_alongshore(XX,YY,Z_interp)
 
+    if plotdir is not None and os.path.isdir(plotdir):
+        dut.plot_bathy2d(XX,YY,Z_gridded,cross_check_fraction,RMSE,d1.date(),plotdir=plotdir)
+    
     ## 
     ## Write out the gridded product
     # get position stuff that will be constant for all surveys!!!
@@ -280,4 +283,5 @@ if __name__=="__main__":
     args = parser.parse_args()
 
     gridded_bathy = generateDailyGriddedTopo(args.day.strftime("%Y-%m-%d"), args.odir, verbose=1,
-                                             datacache=os.path.join(os.path.curdir,'cachedir'),cross_check_fraction=0.05)
+                                             datacache=os.path.join(os.path.curdir,'cachedir'),cross_check_fraction=0.05,
+                                             plotdir='./plots')
