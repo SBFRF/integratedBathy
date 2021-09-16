@@ -16,7 +16,7 @@ yaml_dir=os.path.join(os.path.abspath(os.path.dirname(__file__)),'yamls')#eventu
 
 
 def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.), yFRF_lim=(0,1400.), dxFRF=(5.,5.), verbose=0,
-                             datacache=None):
+                             datacache=None, cross_check_fraction=None):
     """
     :param dSTR_s: string that determines the start date of the times of the surveys you want to use to update the DEM
                     format is  dSTR_s = '2013-01-04'
