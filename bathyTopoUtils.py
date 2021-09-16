@@ -95,6 +95,41 @@ def plot_bathy2d(XX,YY,ZZ,error_fraction,error_estimate,datelabel,plotdir=os.pat
     ax = fig.add_subplot(111)
 
     im=ax.pcolor(XX,YY,ZZ,shading='auto',cmap=plt.get_cmap('gist_earth'))
+    im2=ax.contour(XX,YY,ZZ,levels=[-8,-5,-2,0,2,4],colors='w',linewidths=2)
+    title='Gridded Topo and Bathymetry for {0}\n'.format(datelabel)
+    if error_fraction is not None and error_estimate is not None:
+        title+='{0}% cross-validation error {1:7.5f}'.format(100.*float(error_fraction),float(error_estimate))
+    ax.set_title(title)
+                                                                                                         
+    ax.set_xlabel('X FRF [m]')
+    ax.set_ylabel('Y FRF [m]')
+
+    fig.colorbar(im)
+
+    plotname='griddedTopoBathy_{0}.png'.format(datelabel)
+    plt.savefig(os.path.join(plotdir,plotname))
+
+    return fig
+
+def plot_bathy2d_with_obs(XX,YY,ZZ,obs_locs,error_fraction,error_estimate,datelabel,plotdir=os.path.curdir):
+    assert os.path.isdir(plotdir), '{0} not a valid directory'.format(plotdir)
+    
+    mpl.rcParams['axes.linewidth']=2
+    mpl.rcParams['axes.labelweight']='bold'
+    mpl.rcParams['axes.titlesize']=16
+    mpl.rcParams['axes.titleweight']='bold'
+    mpl.rcParams['axes.labelsize']='large'
+    mpl.rcParams['font.size']=16
+    mpl.rcParams['xtick.labelsize']='large'
+    mpl.rcParams['ytick.labelsize']='large'
+
+    fig=plt.figure(figsize=(12,14))
+    ax = fig.add_subplot(111)
+
+    im=ax.pcolor(XX,YY,ZZ,shading='auto',cmap=plt.get_cmap('gist_earth'))
+    im2=ax.contour(XX,YY,ZZ,levels=[-8,-5,-2,0,2,4],colors='w',linewidths=2)
+    im3=ax.scatter(obs_locs[:,0],obs_locs[:,1],alpha=0.5,s=0.5,c='k')
+    
     title='Gridded Topo and Bathymetry for {0}\n'.format(datelabel)
     if error_fraction is not None and error_estimate is not None:
         title+='{0}% cross-validation error {1:7.5f}'.format(100.*float(error_fraction),float(error_estimate))

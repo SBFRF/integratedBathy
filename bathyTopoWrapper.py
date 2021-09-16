@@ -89,22 +89,23 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
         topo_dune = go.getLidarDEM(lidarLoc='dune')
 
     if topo_dune is not None:
-        if verbose > 0:
-            print('nx,ny for topo lidar = ({0},{1})'.format(topo_dune['xFRF'].shape[0],topo_dune['yFRF'].shape[0]))
-            print('xFRF range for pier lidar = ({0},{1})'.format(topo_dune['xFRF'].min(),topo_dune['xFRF'].max()))
-            print('yFRF range for pier lidar = ({0},{1})'.format(topo_dune['yFRF'].min(),topo_dune['yFRF'].max()))
-
-            print('nt,nx,ny for topo lidar = ({0},{1},{2})'.format(topo_dune['elevation'].shape[0],
-                                                                   topo_dune['elevation'].shape[1],topo_dune['elevation'].shape[2]))
-            #
-
-
         Xdune,Ydune=np.meshgrid(topo_dune['xFRF'],topo_dune['yFRF'])
         points_dune=np.vstack((Xdune.flat[:],Ydune.flat[:])).T
         if topo_dune['elevation'].ndim==2: #must be 3d
             topo_dune['elevation']=topo_dune['elevation'][np.newaxis,:,:]
             
         nt_dune=topo_dune['elevation'].shape[0]
+        if verbose > 0:
+            print('nx,ny for topo lidar = ({0},{1})'.format(topo_dune['xFRF'].shape[0],topo_dune['yFRF'].shape[0]))
+            print('xFRF range for dune lidar = ({0},{1})'.format(topo_dune['xFRF'].min(),topo_dune['xFRF'].max()))
+            print('yFRF range for dune lidar = ({0},{1})'.format(topo_dune['yFRF'].min(),topo_dune['yFRF'].max()))
+
+ 
+
+        if verbose > 0:
+            print('nt,nx,ny for dune lidar = ({0},{1},{2})'.format(topo_dune['elevation'].shape[0],
+                                                                   topo_dune['elevation'].shape[1],topo_dune['elevation'].shape[2]))
+            #
 
         # add to the list
         Xlidar.append(np.tile(Xdune,(nt_dune,1,1)))
@@ -131,15 +132,18 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
         Xpier,Ypier=np.meshgrid(topo_pier['xFRF'],topo_pier['yFRF'])
         points_pier=np.vstack((Xpier.flat[:],Ypier.flat[:])).T
 
-        if verbose > 0:
-            print('nx,ny for pier lidar = ({0},{1})'.format(topo_pier['xFRF'].shape[0],topo_pier['yFRF'].shape[0]))
-            print('xFRF range for pier lidar = ({0},{1})'.format(topo_pier['xFRF'].min(),topo_pier['xFRF'].max()))
-            print('yFRF range for pier lidar = ({0},{1})'.format(topo_pier['yFRF'].min(),topo_pier['yFRF'].max()))
         #
         if topo_pier['elevation'].ndim==2: #must be 3d
             topo_pier['elevation']=topo_pier['elevation'][np.newaxis,:,:]
         nt_pier=topo_pier['elevation'].shape[0]
+        if verbose > 0:
+            print('nx,ny for pier lidar = ({0},{1})'.format(topo_pier['xFRF'].shape[0],topo_pier['yFRF'].shape[0]))
+            print('xFRF range for pier lidar = ({0},{1})'.format(topo_pier['xFRF'].min(),topo_pier['xFRF'].max()))
+            print('yFRF range for pier lidar = ({0},{1})'.format(topo_pier['yFRF'].min(),topo_pier['yFRF'].max()))
 
+            print('nt,nx,ny for pier lidar = ({0},{1},{2})'.format(topo_pier['elevation'].shape[0],
+                                                                   topo_pier['elevation'].shape[1],topo_pier['elevation'].shape[2]))
+ 
         # add to the list
         Xlidar.append(np.tile(Xpier,(nt_pier,1,1)))
         Ylidar.append(np.tile(Ypier,(nt_pier,1,1)))
@@ -212,6 +216,8 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
 
     if plotdir is not None and os.path.isdir(plotdir):
         dut.plot_bathy2d(XX,YY,Z_gridded,cross_check_fraction,RMSE,d1.date(),plotdir=plotdir)
+        dut.plot_bathy2d(XX,YY,Z_interp,cross_check_fraction,RMSE,str(d1.date())+'-unextended',plotdir=plotdir)
+        dut.plot_bathy2d_with_obs(XX,YY,Z_gridded,points,cross_check_fraction,RMSE,str(d1.date())+'-with-obs',plotdir=plotdir)
     
     ## 
     ## Write out the gridded product
@@ -287,5 +293,5 @@ if __name__=="__main__":
     args = parser.parse_args()
 
     gridded_bathy = generateDailyGriddedTopo(args.day.strftime("%Y-%m-%d"), args.odir, verbose=1,
-                                             datacache=os.path.join(os.path.curdir,'cachedir'),cross_check_fraction=0.05,
+                                             datacache=os.path.join(os.path.curdir,'datacache'),cross_check_fraction=0.05,
                                              plotdir='./plots',server='FRF')
