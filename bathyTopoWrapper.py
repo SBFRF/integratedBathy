@@ -211,15 +211,25 @@ if __name__=="__main__":
         except ValueError:
             msg = "Not a valid date: '{0}'.".format(s)
             raise argparse.ArgumentTypeError(msg)
-    
+    def check_path(s):
+        if os.path.isdir(s):
+            return s
+        msg = "Not a valid directory path: '{0}'.".format(s)
+        raise argparse.ArgumentTypeError(msg)
+        
+     
     parser = argparse.ArgumentParser(description="Input for daily bathy-topo product")
 
     parser.add_argument('day',
                         help="Day for computing bathy-topo product - format YYYY-MM-DD", 
                         type=check_datestring)
-                        
+    parser.add_argument('-O','--odir',
+                        help="path for writing output bathy netcdf files",
+                        default=os.path.join(os.curdir,'products'),
+                        type=check_path)
+    
     args = parser.parse_args()
     
-    output_dir='./products'
-    gridded_bathy = generateDailyGriddedTopo(args.day.strftime("%Y-%m-%d"), output_dir, verbose=1,
+    
+    gridded_bathy = generateDailyGriddedTopo(args.day.strftime("%Y-%m-%d"), args.odir, verbose=1,
                                              datacache=os.path.join(os.path.curdir,'datacache'))
