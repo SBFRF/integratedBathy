@@ -5,18 +5,20 @@ import datetime as dt
 import scipy
 from scipy import interpolate
 import pickle
+import getopt
+import sys
 import bathyTopoUtils as dut
 from getdatatestbed import getDataFRF
 import testbedutils
 import testbedutils.py2netCDF as py2netCDF
 import testbedutils.geoprocess as geoprocess
 
-## ok to hardcode for this package?
-yaml_dir=os.path.join(os.path.abspath(os.path.dirname(__file__)),'yamls')#eventually move to os.pardir
+# hard coded yaml directory
+yaml_dir=os.path.join(os.path.abspath(os.path.dirname(__file__)),'yamls')  #eventually move to os.pardir
 
 
-def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.), yFRF_lim=(0,1400.), dxFRF=(5.,5.), verbose=0,
-                             datacache=None, cross_check_fraction=None):
+def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.), yFRF_lim=(0,1400.), dxFRF=(5.,5.),
+                             verbose=0, datacache=None, cross_check_fraction=None):
     """
     :param dSTR_s: string that determines the start date of the times of the surveys you want to use to update the DEM
                     format is  dSTR_s = '2013-01-04'
@@ -60,7 +62,7 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
     outfile=os.path.join(dir_loc,'IntegratedBathyTopo-{0}.nc'.format(d1.date()))
     
     ## for grabbing from the thredd server
-    go = getDataFRF.getObs(d1,d2)
+    go = getDataFRF.getObs(d1, d2)
     #gtb = getDataFRF.getDataTestBed(d1,d2)
 
     ## dune
@@ -203,8 +205,12 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
     return nc_dict
 
 if __name__=="__main__":
-
-    day='2021-07-21'
+    opts, args = getopt.getopt(sys.argv[1:], "h", ["help"])
+    if len(args) <1:
+        day = dt.datetime.today().strftime("%Y-%m-%d")
+    else:
+        day = args[0]
+        # '2021-07-21'
     output_dir='./products'
     gridded_bathy = generateDailyGriddedTopo(day, output_dir, verbose=1,
-                                             datacache=os.path.join(os.path.curdir,'datacache'))
+                                             datacache=None)
