@@ -1,11 +1,11 @@
 import os
+import argparse
 import numpy as np
 import netCDF4 as nc
 import datetime as dt
 import scipy
 from scipy import interpolate
 import pickle
-import getopt
 import sys
 import bathyTopoUtils as dut
 from getdatatestbed import getDataFRF
@@ -60,6 +60,9 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
 
     # output netcdf
     outfile=os.path.join(dir_loc,'IntegratedBathyTopo-{0}.nc'.format(d1.date()))
+
+    # holds the lidar data sets
+    Xlidar,Ylidar,Zlidar=[],[],[]
     
     ## for grabbing from the thredd server
     go = getDataFRF.getObs(d1, d2)
@@ -80,24 +83,28 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
     else:
         topo_dune = go.getLidarDEM(lidarLoc='dune')
 
-    if topo_dune is None:
-        raise Exception('Downloading topo_dune failed!')
-    
-    if verbose > 0:
-        print('nx,ny for topo lidar = ({0},{1})'.format(topo_dune['xFRF'].shape[0],topo_dune['yFRF'].shape[0]))
-        print('xFRF range for pier lidar = ({0},{1})'.format(topo_dune['xFRF'].min(),topo_dune['xFRF'].max()))
-        print('yFRF range for pier lidar = ({0},{1})'.format(topo_dune['yFRF'].min(),topo_dune['yFRF'].max()))
+    if topo_dune is not None:
+        if verbose > 0:
+            print('nx,ny for topo lidar = ({0},{1})'.format(topo_dune['xFRF'].shape[0],topo_dune['yFRF'].shape[0]))
+            print('xFRF range for pier lidar = ({0},{1})'.format(topo_dune['xFRF'].min(),topo_dune['xFRF'].max()))
+            print('yFRF range for pier lidar = ({0},{1})'.format(topo_dune['yFRF'].min(),topo_dune['yFRF'].max()))
 
-        print('nt,nx,ny for topo lidar = ({0},{1},{2})'.format(topo_dune['elevation'].shape[0],
-                                                               topo_dune['elevation'].shape[1],topo_dune['elevation'].shape[2]))
-    #
+            print('nt,nx,ny for topo lidar = ({0},{1},{2})'.format(topo_dune['elevation'].shape[0],
+                                                                   topo_dune['elevation'].shape[1],topo_dune['elevation'].shape[2]))
+            #
 
-    
-    Xdune,Ydune=np.meshgrid(topo_dune['xFRF'],topo_dune['yFRF'])
-    points_dune=np.vstack((Xdune.flat[:],Ydune.flat[:])).T
 
-    nt_dune=topo_dune['elevation'].shape[0]
+        Xdune,Ydune=np.meshgrid(topo_dune['xFRF'],topo_dune['yFRF'])
+        points_dune=np.vstack((Xdune.flat[:],Ydune.flat[:])).T
 
+        nt_dune=topo_dune['elevation'].shape[0]
+
+        # add to the list
+        Xlidar.append(np.tile(Xdune,(nt_dune,1,1)))
+        Ylidar.append(np.tile(Ydune,(nt_dune,1,1)))
+        Zlidar.append(topo_dune['elevation'])
+    else:
+        print('WARNING no dune lidar found!')
     ## pier
     if datacache is not None:
         pier_file=os.path.join(datacache,'topo_pier_{0}.p'.format(d1.date()))
@@ -113,29 +120,36 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
     else:
         topo_pier = go.getLidarDEM(lidarLoc='pier')
     
-    if topo_pier is None:
-        raise Exception('Downloading topo_pier failed!')
+    if topo_pier is not None:
+        Xpier,Ypier=np.meshgrid(topo_pier['xFRF'],topo_pier['yFRF'])
+        points_pier=np.vstack((Xpier.flat[:],Ypier.flat[:])).T
 
-    Xpier,Ypier=np.meshgrid(topo_pier['xFRF'],topo_pier['yFRF'])
-    points_pier=np.vstack((Xpier.flat[:],Ypier.flat[:])).T
+        if verbose > 0:
+            print('nx,ny for pier lidar = ({0},{1})'.format(topo_pier['xFRF'].shape[0],topo_pier['yFRF'].shape[0]))
+            print('xFRF range for pier lidar = ({0},{1})'.format(topo_pier['xFRF'].min(),topo_pier['xFRF'].max()))
+            print('yFRF range for pier lidar = ({0},{1})'.format(topo_pier['yFRF'].min(),topo_pier['yFRF'].max()))
+        #
+        nt_pier=topo_pier['elevation'].shape[0]
 
-    if verbose > 0:
-        print('nx,ny for pier lidar = ({0},{1})'.format(topo_pier['xFRF'].shape[0],topo_pier['yFRF'].shape[0]))
-        print('xFRF range for pier lidar = ({0},{1})'.format(topo_pier['xFRF'].min(),topo_pier['xFRF'].max()))
-        print('yFRF range for pier lidar = ({0},{1})'.format(topo_pier['yFRF'].min(),topo_pier['yFRF'].max()))
-    #
-    nt_pier=topo_pier['elevation'].shape[0]
+        # add to the list
+        Xlidar.append(np.tile(Xpier,(nt_pier,1,1)))
+        Ylidar.append(np.tile(Ypier,(nt_pier,1,1)))
+        Zlidar.append(topo_pier['elevation'])
+    else:
+        print('WARNING no pier lidar found!')
 
-    ## interpolate topography points
-    all_points,all_values,Z_all=dut.combine_and_interpolate_masked_lidar([np.tile(Xdune,(nt_dune,1,1)),
-                                                                          np.tile(Xpier,(nt_pier,1,1))],
-                                                                         [np.tile(Ydune,(nt_dune,1,1)),
-                                                                          np.tile(Ypier,(nt_pier,1,1))],
-                                                                         [topo_dune['elevation'],
-                                                                          topo_pier['elevation']],
-                                                                         XX,YY,method=interp_method)
+    assert len(Xlidar)==len(Ylidar)
+    assert len(Xlidar)==len(Zlidar)
 
+    if len(Xlidar) > 0:
+        ## interpolate topography points
+        all_points,all_values,Z_all=dut.combine_and_interpolate_masked_lidar(Xlidar,Ylidar,Zlidar,
+                                                                             XX,YY,method=interp_method)
 
+    else:
+        print('WARNING no lidar data found!')
+        all_points=np.empty(shape=(0,2))
+        all_values=np.empty(shape=(0,))
     ## load bathymetry transects from survey
     if datacache is not None:
         bathy_file=os.path.join(datacache,'bathy_data_{0}.p'.format(d1.date()))
@@ -151,18 +165,21 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
     else:
         bathy_data = go.getBathyTransectFromNC()
 
-    if bathy_data is None:
-        raise Exception('Downloading bathy_data failed!')
-
-    bathy_points=np.vstack((bathy_data['xFRF'],bathy_data['yFRF'])).T
+    if bathy_data is not None:
+        bathy_points=np.vstack((bathy_data['xFRF'],bathy_data['yFRF'])).T
+        bathy_values=bathy_data['elevation']
+    else:
+        print('WARNING bathy points failed to download!')
+        bathy_points=np.empty(shape=(0,2))
+        bathy_values=np.empty(shape=(0,))
     ## combine bathy transects and topo
     points=np.vstack((all_points,bathy_points))
-    values=np.concatenate((all_values,bathy_data['elevation']))
+    values=np.concatenate((all_values,bathy_values))
 
     if verbose > 0:
         print('Total number of data points is {0}'.format(points.shape[0]))
 
-    Z_interp=scipy.interpolate.griddata(points,values,(XX,YY),method='linear',fill_value=np.nan)
+    Z_interp=scipy.interpolate.griddata(points,values,(XX,YY),method=interp_method,fill_value=np.nan)
 
     ## extend in the alongshore to the grid boundaries
     Y_start_index,Y_end_index,Z_gridded=dut.extend_alongshore(XX,YY,Z_interp)
@@ -205,15 +222,31 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
     return nc_dict
 
 if __name__=="__main__":
-    opts, args = getopt.getopt(sys.argv[1:], "h", ["help"])
-    if len(args) <1:
-        day = dt.datetime.today().strftime("%Y-%m-%d")
-    else:
-        day = args[0]
-        # '2021-07-21'
-    if len(args) < 1:
-        output_dir = "/thredds_data/integratedBathyProduct/integratedBathyTopo"
-    else:
-        output_dir='./products'
-    gridded_bathy = generateDailyGriddedTopo(day, output_dir, verbose=1,
+    def check_datestring(s):
+        try:
+            return dt.datetime.strptime(s, "%Y-%m-%d")
+        except ValueError:
+            msg = "Not a valid date: '{0}'.".format(s)
+            raise argparse.ArgumentTypeError(msg)
+    def check_path(s):
+        if os.path.isdir(s):
+            return s
+        msg = "Not a valid directory path: '{0}'.".format(s)
+        raise argparse.ArgumentTypeError(msg)
+
+    parser = argparse.ArgumentParser(description="Input for daily bathy-topo product")
+
+    parser.add_argument('day',
+                        help="Day for computing bathy-topo product - format YYYY-MM-DD",
+                        nargs='?',
+                        default=dt.datetime.today().strftime("%Y-%m-%d"),
+                        type=check_datestring)
+    parser.add_argument('-O','--odir',
+                        help="path for writing output bathy netcdf files",
+                        default="/thredds_data/integratedBathyProduct/integratedBathyTopo",
+                        type=check_path)
+
+    args = parser.parse_args()
+
+    gridded_bathy = generateDailyGriddedTopo(args.day.strftime("%Y-%m-%d"), args.odir, verbose=1,
                                              datacache=None)
