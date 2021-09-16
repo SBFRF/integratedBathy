@@ -71,6 +71,10 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
             topo_dune=pickle.load(open(dune_file,"rb"))
         else:
             topo_dune = go.getLidarDEM(lidarLoc='dune')
+            try:
+                pickle.dump(topo_dune, open( dune_file, "wb" ) )
+            except:
+                print('unable to pickle dune topo to {0}'.format(dune_file))
     else:
         topo_dune = go.getLidarDEM(lidarLoc='dune')
 
@@ -98,11 +102,15 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
     ## pier
     if datacache is not None:
         pier_file=os.path.join(datacache,'topo_pier_{0}.p'.format(d1.date()))
-        if os.path.isfile(dune_file):
+        if os.path.isfile(pier_file):
             print('NOTE: reading topo_dune file from cache: {0}'.format(pier_file))
             topo_pier=pickle.load(open(pier_file,"rb"))
         else:
             topo_pier = go.getLidarDEM(lidarLoc='pier')
+            try:
+                pickle.dump(topo_pier, open( pier_file, "wb" ) )
+            except:
+                print('unable to pickle dune topo to {0}'.format(pier_file))
     else:
         topo_pier = go.getLidarDEM(lidarLoc='pier')
     
@@ -135,11 +143,15 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
     ## load bathymetry transects from survey
     if datacache is not None:
         bathy_file=os.path.join(datacache,'bathy_data_{0}.p'.format(d1.date()))
-        if os.path.isfile(dune_file):
+        if os.path.isfile(bathy_file):
             print('NOTE: reading topo_dune file from cache: {0}'.format(pier_file))
             bathy_data=pickle.load(open(bathy_file,"rb"))
         else:
             bathy_data = go.getBathyTransectFromNC()
+            try:
+                pickle.dump(bathy_data, open( bathy_file, "wb" ) )
+            except:
+                print('unable to pickle dune topo to {0}'.format(bathy_file))
     else:
         bathy_data = go.getBathyTransectFromNC()
 
@@ -198,7 +210,7 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
 
 if __name__=="__main__":
 
-    day='2021-07-22'
+    day='2021-07-21'
     output_dir='./products'
-    gridded_bathy = generateDailyGriddedTopo(day, output_dir, verbose=1)
-    #                                         datacache=os.path.join(os.path.curdir,'datacache'))
+    gridded_bathy = generateDailyGriddedTopo(day, output_dir, verbose=1,
+                                             datacache=os.path.join(os.path.curdir,'datacache'))
