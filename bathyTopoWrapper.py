@@ -95,9 +95,6 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
     points_dune=np.vstack((Xdune.flat[:],Ydune.flat[:])).T
 
     nt_dune=topo_dune['elevation'].shape[0]
-    dune_values,dune_points,Z_dune=dut.interpolate_masked_lidar(np.tile(Xdune,(nt_dune,1,1)),
-                                                                np.tile(Ydune,(nt_dune,1,1)),
-                                                                topo_dune['elevation'],XX,YY,method=interp_method)
 
     ## pier
     if datacache is not None:
@@ -126,9 +123,6 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
         print('yFRF range for pier lidar = ({0},{1})'.format(topo_pier['yFRF'].min(),topo_pier['yFRF'].max()))
     #
     nt_pier=topo_pier['elevation'].shape[0]
-    pier_values,pier_points,Z_pier=dut.interpolate_masked_lidar(np.tile(Xpier,(nt_pier,1,1)),
-                                                                np.tile(Ypier,(nt_pier,1,1)),topo_pier['elevation'],XX,YY,method=interp_method)
-
 
     ## interpolate topography points
     all_points,all_values,Z_all=dut.combine_and_interpolate_masked_lidar([np.tile(Xdune,(nt_dune,1,1)),
