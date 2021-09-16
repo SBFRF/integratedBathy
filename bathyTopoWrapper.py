@@ -30,7 +30,8 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
     :param xFRF_lim: acrossshore limits of the output grid in FRF coordinates
     :param yFRF_lim: alongshore limits of the output grid in FRF coordinates
     :param dxFRF_lim: output grid resolution in FRF coordinates
-
+    :param datacache: where to store and look for cached download files. Forces download if None
+    :param cross_check_fraction: fraction of points to exclude for evaluating
     :return: writes out the .nc files for the gridded bathymetry and topography
 
     """
@@ -54,6 +55,10 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
     interp_method = 'linear'
     assert method_flag == 0
 
+    check_error = False
+    if cross_check_fraction is not None and 0. < cross_check_fraction and cross_check_fraction < 1.:
+        check_error = True
+        
     ## configure input and output files
     global_yaml = os.path.join(yaml_dir,'IntegratedBathyTopo_Global.yml')
     var_yaml = os.path.join(yaml_dir,'IntegratedBathyTopo_grid_var.yml')
@@ -175,15 +180,33 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
     ## combine bathy transects and topo
     points=np.vstack((all_points,bathy_points))
     values=np.concatenate((all_values,bathy_values))
-
+    
+    ## try to evaluate accuracy on a few points
+    check_points=np.empty(shape=(0,2))
+    check_values=np.empty(shape=(0,))
+    if check_error:
+        check_points,check_values,new_points,new_values,check_inds=dut.extract_values_and_points(points,values,cross_check_fraction)
+        orig_points=points.copy()
+        orig_values=values.copy()
+        points=new_points
+        values=new_values
+    
+    
     if verbose > 0:
         print('Total number of data points is {0}'.format(points.shape[0]))
 
     Z_interp=scipy.interpolate.griddata(points,values,(XX,YY),method=interp_method,fill_value=np.nan)
 
+    RMSE=None
+    if check_error:
+        Z_check=scipy.interpolate.griddata(points,values,check_points,method=interp_method,fill_value=np.nan)
+        diff=check_values-Z_check
+        RMSE=np.sqrt(np.sum(diff**2)/float(diff.size))
+        print('RMSE on {0}% random points is {1}'.format(cross_check_fraction,RMSE))
     ## extend in the alongshore to the grid boundaries
     Y_start_index,Y_end_index,Z_gridded=dut.extend_alongshore(XX,YY,Z_interp)
 
+    ## 
     ## Write out the gridded product
     # get position stuff that will be constant for all surveys!!!
     xFRFi_vecN = XX.reshape((1, XX.shape[0] * XX.shape[1]))[0]
@@ -216,7 +239,15 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
     nc_dict['updateTime'] = np.ones_like(nc_dict['elevation'])*d1.timestamp()
     nc_dict['time'] = d1.timestamp()
     nc_dict['survey_time'] = np.nanmean(bathy_data['epochtime'])
-
+    if RMSE is None:
+        nc_dict['error_estimate']=-999.99
+    else:
+        nc_dict['error_estimate']=RMSE
+    if cross_check_fraction is None:
+        nc_dict['error_fraction']=-999.99
+    else:
+        nc_dict['error_fraction']=cross_check_fraction
+        
     py2netCDF.makenc_generic(outfile,global_yaml,var_yaml,nc_dict)
     
     return nc_dict
@@ -249,4 +280,4 @@ if __name__=="__main__":
     args = parser.parse_args()
 
     gridded_bathy = generateDailyGriddedTopo(args.day.strftime("%Y-%m-%d"), args.odir, verbose=1,
-                                             datacache=None)
+                                             datacache=os.path.join(os.path.curdir,'cachedir'),cross_check_fraction=0.05)
