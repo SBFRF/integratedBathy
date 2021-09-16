@@ -18,7 +18,7 @@ yaml_dir=os.path.join(os.path.abspath(os.path.dirname(__file__)),'yamls')  #even
 
 
 def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.), yFRF_lim=(0,1400.), dxFRF=(5.,5.),
-                             verbose=0, datacache=None, cross_check_fraction=None, plotdir=None):
+                             verbose=0, datacache=None, cross_check_fraction=None, plotdir=None, server=None):
     """
     :param dSTR_s: string that determines the start date of the times of the surveys you want to use to update the DEM
                     format is  dSTR_s = '2013-01-04'
@@ -70,7 +70,7 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
     Xlidar,Ylidar,Zlidar=[],[],[]
     
     ## for grabbing from the thredd server
-    go = getDataFRF.getObs(d1, d2)
+    go = getDataFRF.getObs(d1, d2, server=server)
     #gtb = getDataFRF.getDataTestBed(d1,d2)
 
     ## dune
@@ -101,7 +101,9 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
 
         Xdune,Ydune=np.meshgrid(topo_dune['xFRF'],topo_dune['yFRF'])
         points_dune=np.vstack((Xdune.flat[:],Ydune.flat[:])).T
-
+        if topo_dune['elevation'].ndim==2: #must be 3d
+            topo_dune['elevation']=topo_dune['elevation'][np.newaxis,:,:]
+            
         nt_dune=topo_dune['elevation'].shape[0]
 
         # add to the list
@@ -134,6 +136,8 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
             print('xFRF range for pier lidar = ({0},{1})'.format(topo_pier['xFRF'].min(),topo_pier['xFRF'].max()))
             print('yFRF range for pier lidar = ({0},{1})'.format(topo_pier['yFRF'].min(),topo_pier['yFRF'].max()))
         #
+        if topo_pier['elevation'].ndim==2: #must be 3d
+            topo_pier['elevation']=topo_pier['elevation'][np.newaxis,:,:]
         nt_pier=topo_pier['elevation'].shape[0]
 
         # add to the list
@@ -284,4 +288,4 @@ if __name__=="__main__":
 
     gridded_bathy = generateDailyGriddedTopo(args.day.strftime("%Y-%m-%d"), args.odir, verbose=1,
                                              datacache=os.path.join(os.path.curdir,'cachedir'),cross_check_fraction=0.05,
-                                             plotdir='./plots')
+                                             plotdir='./plots',server='FRF')
