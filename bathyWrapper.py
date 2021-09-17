@@ -1,9 +1,10 @@
+import matplotlib
+matplotlib.use('Agg')
 import netCDF4 as nc
 import MakeUpdatedBathyDEM as mBATHY
 import datetime as dt
 import wrappers
 import datetime as DT
-
 
 
 def bathyWrapper():
@@ -23,7 +24,7 @@ def bathyWrapper():
     dir_loc = u'/home/number/thredds_data/integratedBathyProduct/survey'
     # scale c and spline stuff
     # list of inputs!!!!!
-    x_smooth = 40  # scale c interp x-direction smoothing
+    x_smooth = 20  # scale c interp x-direction smoothing
     y_smooth = 100  # scale c interp y-direction smoothing
     # splinebctype - this is the type of spline you want to force
     # options are....
@@ -33,12 +34,12 @@ def bathyWrapper():
     # 10 - force value and derivative(first?!?) to zero at boundary
     splinebctype = 10
     off = 10 # offset for the edge splining!!!!!
-    lc = 4  # spline smoothing constraint value
-    dxm = 2  # coarsening of the grid for spline (e.g., 2 means calculate with a dx that is 2x input dx)
+    lc = [3,8]  # spline smoothing constraint value
+    dxm = [1, 3]  # coarsening of the grid for spline (e.g., 2 means calculate with a dx that is 2x input dx)
     # can be tuple if you want to do dx and dy seperately (dxm, dym), otherwise dxm is used for both
     dxi = 1  # fining of the grid for spline (e.g., 0.1 means return spline on a grid that is 10x input dx)
     # as with dxm, can be a tuple if you want seperate values for dxi and dyi
-    targetvar = 0.8 # this is the target variance used in the spline function.
+    targetvar = 0.3 # this is the target variance used in the spline function.
 
     # store that noise in a dictionary
     scalecDict = {}

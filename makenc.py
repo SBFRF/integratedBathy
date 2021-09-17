@@ -13,8 +13,8 @@ import csv
 import datetime as DT
 import yaml
 import time as ttime
-from sblib import sblib as sb
-import sblib.geoprocess as gp
+from testbedutils import geoprocess as gp
+from testbedutils import sblib as sb
 
 def readflags(flagfname, header=1):
     """
@@ -394,7 +394,7 @@ def makenc_Station(stat_data, globalyaml_fname, flagfname, ofname, griddata, sta
     statnamelen = fid.createDimension('station_name_length', len(stat_data['station_name']))
     northing = fid.createDimension('Northing', 1L)
     easting = fid.createDimension('Easting', 1L )
-    Lon = fid.createDimension('Lon', np.size(stat_data['Lon']))    
+    Lon = fid.createDimension('Lon', np.size(stat_data['Lon']))
     Lat = fid.createDimension('Lat', np.size(stat_data['Lat']))
     dirbin = fid.createDimension('waveDirectionBins', np.size(stat_data['waveDirectionBins']))
     frqbin = fid.createDimension('waveFrequency', np.size(stat_data['waveFrequency']))
