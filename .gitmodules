@@ -1,17 +1,6 @@
-[submodule "gridTools"]
-	path = gridTools
-	url = git@bitbucket.org:SBFRF/gridtools.git
-
-[submodule "sblib"]
-	path = sblib
-	url = git@bitbucket.org:SBFRF/sblib.git
 [submodule "getdatatestbed"]
 	path = getdatatestbed
-	url = git@bitbucket.org:SBFRF/getdatatestbed.git
-
-[submodule "scaleCinterp_python"]
-	path = scaleCinterp_python
-	url = git@github.com:SBFRF/scaleCinterp_python.git
-[submodule "prepdata"]
-	path = prepdata
-	url = git@bitbucket.org:SBFRF/prepdata.git
+	url = https://github.com/SBFRF/getdatatestbed.git
+[submodule "testbedutils"]
+	path = testbedutils
+	url = https://github.com/SBFRF/testbedutils.git
