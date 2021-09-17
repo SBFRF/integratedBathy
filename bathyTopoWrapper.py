@@ -12,6 +12,7 @@ from getdatatestbed import getDataFRF
 import testbedutils
 import testbedutils.py2netCDF as py2netCDF
 import testbedutils.geoprocess as geoprocess
+from testbedutils import cmtbSlack
 
 # hard coded yaml directory
 yaml_dir=os.path.join(os.path.abspath(os.path.dirname(__file__)),'yamls')  #eventually move to os.pardir
@@ -19,7 +20,7 @@ yaml_dir=os.path.join(os.path.abspath(os.path.dirname(__file__)),'yamls')  #even
 
 def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.), yFRF_lim=(0,1400.), dxFRF=(5.,5.),
                              verbose=0, datacache=None, cross_check_fraction=None, plotdir=None, server=None,
-                             clip4bathy=True):
+                             clip4bathy=True, slack=None):
     """
     :param dSTR_s: string that determines the start date of the times of the surveys you want to use to update the DEM
                     format is  dSTR_s = '2013-01-04'
@@ -228,8 +229,8 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
     if plotdir is not None and os.path.isdir(plotdir):
         dut.plot_bathy2d(XX,YY,Z_gridded,cross_check_fraction,RMSE,d1.date(),plotdir=plotdir)
         dut.plot_bathy2d(XX,YY,Z_interp,cross_check_fraction,RMSE,str(d1.date())+'-unextended',plotdir=plotdir)
-        dut.plot_bathy2d_with_obs(XX,YY,Z_gridded,points,cross_check_fraction,RMSE,str(d1.date())+'-with-obs',plotdir=plotdir)
-        dut.plot_bathy2d_with_obs(XX,YY,Z_interp,points,cross_check_fraction,RMSE,str(d1.date())+'-unextended-with-obs',plotdir=plotdir)
+        _, extendedPlot = dut.plot_bathy2d_with_obs(XX,YY,Z_gridded,points,cross_check_fraction,RMSE,str(d1.date())+'-with-obs',plotdir=plotdir)
+        _, unExtendedPlot = dut.plot_bathy2d_with_obs(XX,YY,Z_interp,points,cross_check_fraction,RMSE,str(d1.date())+'-unextended-with-obs',plotdir=plotdir)
     
     ## 
     ## Write out the gridded product
@@ -272,7 +273,18 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
         nc_dict['error_fraction']=-999.99
     else:
         nc_dict['error_fraction']=cross_check_fraction
-        
+
+    # sendplots to slack if necessary
+    if slack is not None:
+        moveFnames = [os.path.join(plotdir, extendedPlot), os.path.join(plotdir, unExtendedPlot)]
+        if verbose:
+            print(f'Sending to Slack project: {slack}')
+            for fname in moveFnames:
+                print(f"    {fname}")
+        myslack = cmtbSlack.slack('testbedutils/slackSettings.yml', project=slack)  # initialize
+        myslack.postMessageWithFiles(f"checkout BathyTopoFusion plots from {dSTR_s}",
+                                                 moveFnames)
+    # now make netCDF file
     py2netCDF.makenc_generic(outfile,global_yaml,var_yaml,nc_dict)
     
     return nc_dict
@@ -306,4 +318,4 @@ if __name__=="__main__":
 
     gridded_bathy = generateDailyGriddedTopo(args.day.strftime("%Y-%m-%d"), args.odir, verbose=1,
                                              datacache=os.path.join(os.path.curdir,'datacache'),cross_check_fraction=0.05,
-                                             plotdir='./plots',server='FRF')
+                                             plotdir='./plots',server='FRF', slack='cmtb')

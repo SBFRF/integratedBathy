@@ -137,11 +137,12 @@ def plot_bathy2d_with_obs(XX,YY,ZZ,obs_locs,error_fraction,error_estimate,datela
                                                                                                          
     ax.set_xlabel('X FRF [m]')
     ax.set_ylabel('Y FRF [m]')
+    ax.set_xlim([0, 1250])
 
     fig.colorbar(im)
 
     plotname='griddedTopoBathy_{0}.png'.format(datelabel)
     plt.savefig(os.path.join(plotdir,plotname))
 
-    return fig
+    return fig, plotname
 
