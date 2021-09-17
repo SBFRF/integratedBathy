@@ -1,6 +1,7 @@
 import os
 import matplotlib.pyplot as plt
 import  numpy as np
+
 def bathyQAQCplots(fig_loc, d1, updatedBathy):
     """
     This function will QA QC the integrated bathy scripts

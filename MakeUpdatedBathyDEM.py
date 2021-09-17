@@ -5,12 +5,12 @@ from sblib import geoprocess as gp
 from sblib import sblib as sb
 import makenc
 from matplotlib import pyplot as plt
-from bsplineFunctions import bspline_pertgrid, DLY_bspline
+from Archive.bsplineFunctions import bspline_pertgrid
 import datetime as DT
 from scaleCinterp_python.DEM_generator import DEM_generator, makeWBflow2D
 import pandas as pd
 from getdatatestbed import getDataFRF
-from scipy.interpolate import griddata
+
 
 def makeUpdatedBATHY_transects(dSTR_s, dSTR_e, dir_loc, scalecDict=None, splineDict=None, plot=None):
     """
