@@ -1,6 +1,6 @@
-_variables: ['time', 'xFRF', 'yFRF', 'latitude', 'longitude', 'elevation',  'updateTime', 'survey_time']
+_variables: ['time', 'xFRF', 'yFRF', 'latitude', 'longitude', 'elevation',  'updateTime', 'survey_time', 'error_estimate', 'error_fraction']
 _attributes: ['notes']
-_dimensions: ['time', 'yFRF', 'xFRF', 'survey_time']
+_dimensions: ['time', 'yFRF', 'xFRF', 'survey_time', 'error_estimate', 'error_fraction']
 
 time:
     name: 'time'
@@ -91,3 +91,22 @@ longitude:
     short_name: 'lon'
     notes: 'Longitude of the bathymetry nodes in decimal degrees'
 
+error_estimate:
+    name: 'error_estimate'
+    units: 'm'
+    standard_name: 'error_estimate'
+    notes: 'RMSE of interpolant on percentage of data points'
+    data_type: 'f8'
+    dim: ['error_estimate']
+    calendar: 'gregorian'
+    fill_value: '-999.99'
+
+error_fraction:
+    name: 'error_fraction'
+    units: 'm'
+    standard_name: 'error_fraction'
+    notes: 'percentage of data points used for error check'
+    data_type: 'f8'
+    dim: ['error_fraction']
+    calendar: 'gregorian'
+    fill_value: '-999.99'
