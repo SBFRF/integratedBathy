@@ -313,9 +313,9 @@ if __name__=="__main__":
                         help="path for writing output bathy netcdf files",
                         default="/thredds_data/integratedBathyProduct/integratedBathyTopo",
                         type=check_path)
-
+   
     args = parser.parse_args()
-
+    
     gridded_bathy = generateDailyGriddedTopo(args.day.strftime("%Y-%m-%d"), args.odir, verbose=1,
                                              datacache=os.path.join(os.path.curdir,'datacache'),cross_check_fraction=0.05,
                                              plotdir='./plots',server='FRF', slack='cmtb')
