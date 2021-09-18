@@ -3,7 +3,9 @@ import datetime as DT
 import numpy as np
 
 start = DT.datetime.today()
-end = DT.datetime(2021, 7, 1)
+end = DT.datetime(2021, 7, 1) #DT.datetime(2021, 6, 1)
+# note Script works backwards in time
+
 datelist = np.arange(end, start, DT.timedelta(days=1))
 outPath = "/thredds_data/integratedBathyProduct/integratedBathyTopo"
 for date in datelist[::-1]:
