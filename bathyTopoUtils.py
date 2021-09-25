@@ -155,6 +155,7 @@ def plot_bathy2d_with_obs(XX,YY,ZZ,obs_locs,error_fraction,error_estimate,datela
     for yLoc in [1000, 800, 600]:
         idx = np.argwhere(YY[:,0] == yLoc).squeeze()
         ax2.plot(XX[idx], ZZ[idx], '-', label=f"y={yLoc}")
+    ax2.set_xlim([0,500])
     plt.legend()
 
 
