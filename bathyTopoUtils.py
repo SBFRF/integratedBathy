@@ -111,7 +111,9 @@ def plot_bathy2d(XX,YY,ZZ,error_fraction,error_estimate,datelabel,plotdir=os.pat
 
     return fig
 
-def plot_bathy2d_with_obs(XX,YY,ZZ,obs_locs,error_fraction,error_estimate,datelabel,plotdir=os.path.curdir):
+def plot_bathy2d_with_obs(XX,YY,ZZ,obs_locs,error_fraction,error_estimate,datelabel,plotdir=os.path.curdir,
+                          bathyTime=None, topoDuneTime=None, topoPierTime=None):
+    """makes plot of new bathy with observational data overlayed """
     assert os.path.isdir(plotdir), '{0} not a valid directory'.format(plotdir)
     
     mpl.rcParams['axes.linewidth']=2
@@ -124,25 +126,43 @@ def plot_bathy2d_with_obs(XX,YY,ZZ,obs_locs,error_fraction,error_estimate,datela
     mpl.rcParams['ytick.labelsize']='large'
 
     fig=plt.figure(figsize=(12,14))
-    ax = fig.add_subplot(111)
-
+    ax = plt.subplot2grid((4,4),(0,0), colspan=4, rowspan=3)
     im=ax.pcolor(XX,YY,ZZ,shading='auto',cmap=plt.get_cmap('gist_earth'))
     im2=ax.contour(XX,YY,ZZ,levels=[-8,-5,-2,0,2,4],colors='w',linewidths=2)
     im3=ax.scatter(obs_locs[:,0],obs_locs[:,1],alpha=0.5,s=0.5,c='k')
-    
+    ax.plot([0,545], [515,515], 'k-', lw=10, label='FRF pier')
+    plt.legend()
     title='Gridded Topo and Bathymetry for {0}\n'.format(datelabel)
     if error_fraction is not None and error_estimate is not None:
-        title+='{0}% cross-validation error {1:7.5f}'.format(100.*float(error_fraction),float(error_estimate))
+        title+='{0}% cross-validation error {1:7.5f}\n'.format(100.*float(error_fraction),float(error_estimate))
+    if bathyTime is not None:
+        title += f"bathy Source time {bathyTime}\n"
+    if topoPierTime is not None:
+        title+=f"Pier {topoPierTime} "
+    if topoDuneTime is not None:
+        title+= f" Dune {topoDuneTime}"
+
     ax.set_title(title)
                                                                                                          
     ax.set_xlabel('X FRF [m]')
     ax.set_ylabel('Y FRF [m]')
-    ax.set_xlim([0, 1250])
+    ax.set_xlim([0, min(obs_locs[:,0].max(), 1250)])
 
     fig.colorbar(im)
 
+    ax2 = plt.subplot2grid((4,4),(3,0), colspan=4, rowspan=1, sharex=ax)
+
+    for yLoc in [1000, 800, 600]:
+        idx = np.argwhere(YY[:,0] == yLoc).squeeze()
+        ax2.plot(XX[idx], ZZ[idx], '-', label=f"y={yLoc}")
+    ax2.set_xlim([0,500])
+    plt.legend()
+
+
+
+
     plotname='griddedTopoBathy_{0}.png'.format(datelabel)
     plt.savefig(os.path.join(plotdir,plotname))
-
+    plt.close()
     return fig, plotname
 
