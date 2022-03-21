@@ -77,7 +77,7 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
     if datacache is not None:
         bathy_file=os.path.join(datacache,'bathy_data_{0}.p'.format(d1.date()))
         if os.path.isfile(bathy_file):
-            print('NOTE: reading topo_dune file from cache: {0}'.format(pier_file))
+            print('NOTE: reading bathy file from cache: {0}'.format(bathy_file))
             bathy_data=pickle.load(open(bathy_file,"rb"))
         else:
             bathy_data = go.getBathyTransectFromNC()
@@ -226,8 +226,9 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
     Y_start_index,Y_end_index,Z_gridded=dut.extend_alongshore(XX,YY,Z_interp)
 
     if plotdir is not None and os.path.isdir(plotdir):
-        if topo_dune is not None: dunetime = topo_dune['time'][0].date().strftime('%Y-%m-%d')
-        if topo_pier is not None: pierTime = topo_pier['time'][0].date().strftime('%Y-%m-%d')
+        duneTime,pierTime,bathyType=None,None,None
+        if topo_dune is not None: duneTime = np.atleast_1d(topo_dune['time'])[0].date().strftime('%Y-%m-%d')
+        if topo_pier is not None: pierTime = np.atleast_1d(topo_pier['time'])[0].date().strftime('%Y-%m-%d')
         if bathy_data is not None: bathyTime = bathy_data['time'][0].date().strftime('%Y-%m-%d')
         dut.plot_bathy2d(XX,YY,Z_gridded,cross_check_fraction,RMSE,d1.date(),plotdir=plotdir)
         dut.plot_bathy2d(XX,YY,Z_interp,cross_check_fraction,RMSE,str(d1.date())+'-unextended',plotdir=plotdir)
@@ -235,12 +236,12 @@ def generateDailyGriddedTopo(dSTR_s, dir_loc, method_flag=0, xFRF_lim=(0,1100.),
         _, extendedPlot = dut.plot_bathy2d_with_obs(XX,YY,Z_gridded,points,cross_check_fraction,RMSE,
                                                     str(d1.date())+'-with-obs',plotdir=plotdir,
                                                     bathyTime= bathyTime,
-                                                    topoDuneTime=dunetime,
+                                                    topoDuneTime=duneTime,
                                                     topoPierTime=pierTime)
         _, unExtendedPlot = dut.plot_bathy2d_with_obs(XX, YY, Z_interp, points, cross_check_fraction,
                                                     RMSE,str(d1.date())+'-unextended-with-obs', plotdir=plotdir,
                                                     bathyTime = bathyTime,
-                                                    topoDuneTime = dunetime,
+                                                    topoDuneTime = duneTime,
                                                     topoPierTime = pierTime)
 
     ## 
@@ -330,3 +331,5 @@ if __name__=="__main__":
     gridded_bathy = generateDailyGriddedTopo(args.day.strftime("%Y-%m-%d"), args.odir, verbose=1,
                                              datacache=None,cross_check_fraction=0.05,
                                              plotdir='./plots',server='FRF', slack='cmtb')
+#datacache=os.path.join(os.path.curdir,'datacache')
+#server='FRF'    
