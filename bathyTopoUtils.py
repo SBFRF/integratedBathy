@@ -156,10 +156,7 @@ def plot_bathy2d_with_obs(XX,YY,ZZ,obs_locs,error_fraction,error_estimate,datela
         idx = np.argwhere(YY[:,0] == yLoc).squeeze()
         ax2.plot(XX[idx], ZZ[idx], '-', label=f"y={yLoc}")
     ax2.set_xlim([0,500])
-    plt.legend()
-
-
-
+    plt.legend(loc='upper right')
 
     plotname='griddedTopoBathy_{0}.png'.format(datelabel)
     plt.savefig(os.path.join(plotdir,plotname))
